@@ -3,6 +3,7 @@
     "name": "it-asset-management-system-mobile",
     "slug": "it-asset-management-system-mobile",
     "version": "1.0.0",
+    "scheme": "tiqri-assets",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,7 +25,6 @@
     "plugins": [
       "expo-secure-store",
       "expo-router",
-      "expo-status-bar",
       "expo-font",
       "expo-splash-screen"
     ]
