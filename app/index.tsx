@@ -10,7 +10,7 @@ export default function App() {
 
       {/* Uses NotoSans_400Regular */}
       <Text className="text-lg font-sans text-muted-foreground mt-2">
-        Please link your device to continue.
+        Please link your device to continue.npx expo start -c
       </Text>
     </View>
   );
