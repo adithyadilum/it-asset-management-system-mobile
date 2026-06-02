@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { View, ScrollView, RefreshControl } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Header } from '../../src/components/dashboard/Header';
-import { ScannerCard } from '../../src/components/dashboard/ScannerCard';
-import { KPICard } from '../../src/components/dashboard/KPICard';
-import { ActivityList } from '../../src/components/dashboard/ActivityList';
-import { mockMetrics } from '../../src/data/mock';
+import { Header } from '../../components/dashboard/Header';
+import { ScannerCard } from '../../components/dashboard/ScannerCard';
+import { KPICard } from '../../components/dashboard/KPICard';
+import { ActivityList } from '../../components/dashboard/ActivityList';
+import { mockMetrics } from '../../data/mock';
 
 /**
  * Main dashboard screen with header, scanner CTA, KPI cards, and activity list.

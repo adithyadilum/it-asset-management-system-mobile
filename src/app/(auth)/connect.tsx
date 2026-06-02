@@ -13,8 +13,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useAuth } from '../auth-context';
-import { Button } from '../../src/components/ui/Button';
-import { Colors } from '../../src/constants/colors';
+import { Button } from '../../components/ui/Button';
+import { Colors } from '../../constants/colors';
 
 /**
  * Connect/Login screen — redesigned as modern, full-screen experience.
@@ -169,7 +169,7 @@ export default function ConnectScreen() {
         <View className="items-center mb-12">
           <View className="flex-row items-center">
             <Image
-              source={require('../../assets/tiqri-logo.png')}
+              source={require('../../../assets/tiqri-logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />

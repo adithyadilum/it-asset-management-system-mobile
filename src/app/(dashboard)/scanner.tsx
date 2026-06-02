@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
   FadeIn,
 } from 'react-native-reanimated';
-import { Colors } from '../../src/constants/colors';
+import { Colors } from '../../constants/colors';
 
 type ScanMode = 'qr' | 'barcode';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { TabBar } from '../../src/components/navigation/TabBar';
+import { TabBar } from '../../components/navigation/TabBar';
 
 /**
  * Dashboard group layout with bottom tab navigator.

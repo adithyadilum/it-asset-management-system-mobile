@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Colors } from '../../src/constants/colors';
+import { Colors } from '../../constants/colors';
 
 /**
  * My Assets placeholder screen with styled "Coming Soon" empty state.
