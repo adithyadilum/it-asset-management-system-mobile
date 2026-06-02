@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SecureStore from 'expo-secure-store';
 import { ActivityIndicator, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import {
     useFonts,
     NotoSans_400Regular,
@@ -73,6 +74,7 @@ export default function RootLayout() {
 
     return (
         <AuthContext.Provider value={{ setIsAuthenticated }}>
+            <StatusBar style="dark" />
             <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
