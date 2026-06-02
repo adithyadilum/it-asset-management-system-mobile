@@ -9,7 +9,7 @@ import {
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
 import { AuthContext } from './auth-context';
-import "../global.css"; // Move your global CSS import here!
+import "../../global.css"; // Move your global CSS import here!
 
 // Prevent the splash screen from hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -19,10 +19,10 @@ export default function RootLayout() {
         NotoSans_400Regular,
         NotoSans_700Bold,
     });
-    
+
     const [isAuthLoading, setAuthLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    
+
     const segments = useSegments();
     const router = useRouter();
 
@@ -51,7 +51,7 @@ export default function RootLayout() {
         if (isAuthLoading || !loaded) return;
 
         const inAuthGroup = segments[0] === '(auth)';
-        
+
         if (!isAuthenticated && !inAuthGroup) {
             // Redirect to the sign-in page.
             router.replace('/(auth)/connect');

@@ -9,16 +9,16 @@ export default function ConnectScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { setIsAuthenticated } = useAuth();
 
   const handleScan = async ({ data }: { data: string }) => {
     // Prevent duplicate scans
     if (isLoading || !isScanning) return;
-    
+
     setIsLoading(true);
     // Pause scanning visually by keeping the camera open but ignoring new scans via isLoading
-    
+
     try {
       // 1. Gather device metadata
       const deviceName = Device.modelName || 'Unknown Device';
@@ -47,11 +47,11 @@ export default function ConnectScreen() {
       }
 
       const result = await response.json();
-      
+
       if (result.token) {
         // 3. Store JWT
         await SecureStore.setItemAsync('secure_admin_api_key', result.token);
-        
+
         // 4. Update auth context (redirects to dashboard)
         setIsAuthenticated(true);
       } else {
@@ -62,10 +62,12 @@ export default function ConnectScreen() {
       Alert.alert(
         'Pairing Failed',
         error.message || 'The QR code was invalid or expired. Please try again.',
-        [{ text: 'OK', onPress: () => {
-          setIsScanning(false);
-          setIsLoading(false);
-        }}]
+        [{
+          text: 'OK', onPress: () => {
+            setIsScanning(false);
+            setIsLoading(false);
+          }
+        }]
       );
     }
   };
@@ -84,15 +86,15 @@ export default function ConnectScreen() {
   if (isScanning) {
     return (
       <View className="flex-1 bg-black">
-        <CameraView 
-          style={StyleSheet.absoluteFillObject} 
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
           facing="back"
           onBarcodeScanned={isLoading ? undefined : handleScan}
           barcodeScannerSettings={{
             barcodeTypes: ["qr"],
           }}
         />
-        
+
         {/* Overlay */}
         <SafeAreaView className="flex-1 justify-between p-6">
           <View className="items-center mt-8">
@@ -101,7 +103,7 @@ export default function ConnectScreen() {
               Point your camera at the QR code on your computer screen.
             </Text>
           </View>
-          
+
           <View className="flex-1 items-center justify-center">
             {/* Scanner box cutout simulation */}
             <View className="w-64 h-64 border-2 border-white/50 rounded-xl bg-transparent" />
@@ -114,7 +116,7 @@ export default function ConnectScreen() {
                 <Text className="text-white font-sansBold">Verifying...</Text>
               </View>
             ) : (
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="bg-white/20 px-8 py-4 rounded-full"
                 onPress={() => setIsScanning(false)}
               >
@@ -131,20 +133,20 @@ export default function ConnectScreen() {
   return (
     <View className="flex-1 bg-[#f8fafc]">
       <View className="flex-1 items-center justify-center px-6">
-        
+
         {/* Card */}
         <View className="w-full bg-white rounded-xl pt-10 pb-10 px-8 shadow-sm border border-[#e2e8f0] items-center">
-          
+
           {/* Logo Container */}
           <View className="flex-row items-center justify-center mb-8">
-            <Image 
-              source={require('../../assets/tiqri-logo.png')} 
+            <Image
+              source={require('../../../assets/tiqri-logo.png')}
               style={{ width: 85, height: 28 }}
               resizeMode="contain"
             />
             <Text className="text-[22px] font-sansBold text-[#040D5A] ml-0.5 mt-0.5 tracking-tight">Assets</Text>
           </View>
-          
+
           <Text className="text-[19px] font-sansBold text-[#475569] text-center mb-2">
             Welcome back
           </Text>
@@ -153,7 +155,7 @@ export default function ConnectScreen() {
           </Text>
 
           {/* Primary Action Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             className="w-full bg-[#040D5A] py-3 rounded-md flex-row items-center justify-center"
             activeOpacity={0.8}
             onPress={startScanning}
