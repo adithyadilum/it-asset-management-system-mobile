@@ -8,6 +8,7 @@ import {
     NotoSans_400Regular,
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
+import { AuthContext } from './auth-context';
 import "../global.css"; // Move your global CSS import here!
 
 // Prevent the splash screen from hiding until fonts are loaded
@@ -71,9 +72,11 @@ export default function RootLayout() {
     }
 
     return (
-        <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
-        </Stack>
+        <AuthContext.Provider value={{ setIsAuthenticated }}>
+            <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
+            </Stack>
+        </AuthContext.Provider>
     );
 }
