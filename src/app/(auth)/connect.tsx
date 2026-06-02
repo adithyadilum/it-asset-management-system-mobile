@@ -1,20 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Image, SafeAreaView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../auth-context';
 import { Button } from '../../components/ui/Button';
 import { Colors } from '../../constants/colors';
+import { ScannerReticle } from '../../components/ui/ScannerReticle';
+import { exchangeMobileToken } from '../../services/auth';
 
 /**
  * Connect/Login screen — redesigned as modern, full-screen experience.
@@ -27,58 +21,17 @@ export default function ConnectScreen() {
 
   const { setIsAuthenticated } = useAuth();
 
-  // Pulsing animation for scanner corners
-  const pulseOpacity = useSharedValue(1);
-
-  React.useEffect(() => {
-    if (isScanning) {
-      pulseOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.4, { duration: 1000 }),
-          withTiming(1, { duration: 1000 })
-        ),
-        -1,
-        true
-      );
-    }
-  }, [isScanning]);
-
-  const cornerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-  }));
-
   const handleScan = async ({ data }: { data: string }) => {
     if (isLoading || !isScanning) return;
 
     setIsLoading(true);
 
     try {
-      const deviceName = Device.modelName || 'Unknown Device';
-      const deviceOs = `${Device.osName} ${Device.osVersion}`;
-      const deviceModel = Device.designName || Device.modelName || 'Unknown Model';
+      const token = await exchangeMobileToken(data);
 
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
-      const response = await fetch(`${API_URL}/api/auth/mobile-exchange`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: data, deviceName, deviceOs, deviceModel }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Exchange failed with status ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.token) {
-        await SecureStore.setItemAsync('secure_admin_api_key', result.token);
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setIsAuthenticated(true);
-      } else {
-        throw new Error('No token received from server.');
-      }
+      await SecureStore.setItemAsync('secure_admin_api_key', token);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setIsAuthenticated(true);
     } catch (error: any) {
       console.error('Scan Error:', error);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -130,12 +83,7 @@ export default function ConnectScreen() {
 
           {/* Scanner reticle with animated corners */}
           <View className="flex-1 items-center justify-center">
-            <View style={styles.reticleContainer}>
-              <Animated.View style={[styles.corner, styles.topLeft, cornerAnimatedStyle]} />
-              <Animated.View style={[styles.corner, styles.topRight, cornerAnimatedStyle]} />
-              <Animated.View style={[styles.corner, styles.bottomLeft, cornerAnimatedStyle]} />
-              <Animated.View style={[styles.corner, styles.bottomRight, cornerAnimatedStyle]} />
-            </View>
+            <ScannerReticle />
           </View>
 
           <View className="items-center mb-8">
@@ -217,10 +165,6 @@ export default function ConnectScreen() {
   );
 }
 
-const RETICLE_SIZE = 250;
-const CORNER_SIZE = 40;
-const CORNER_THICKNESS = 4;
-
 const styles = StyleSheet.create({
   logo: {
     width: 100,
@@ -252,48 +196,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 18,
-  },
-  reticleContainer: {
-    width: RETICLE_SIZE,
-    height: RETICLE_SIZE,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: CORNER_SIZE,
-    height: CORNER_SIZE,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderTopWidth: CORNER_THICKNESS,
-    borderLeftWidth: CORNER_THICKNESS,
-    borderColor: '#FFFFFF',
-    borderTopLeftRadius: 12,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: CORNER_THICKNESS,
-    borderRightWidth: CORNER_THICKNESS,
-    borderColor: '#FFFFFF',
-    borderTopRightRadius: 12,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: CORNER_THICKNESS,
-    borderLeftWidth: CORNER_THICKNESS,
-    borderColor: '#FFFFFF',
-    borderBottomLeftRadius: 12,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: CORNER_THICKNESS,
-    borderRightWidth: CORNER_THICKNESS,
-    borderColor: '#FFFFFF',
-    borderBottomRightRadius: 12,
   },
   verifyingContainer: {
     flexDirection: 'row',

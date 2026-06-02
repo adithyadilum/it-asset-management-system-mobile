@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo-google-fonts/noto-sans": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
+    "@react-native-community/netinfo": "11.4.1",
     "expo": "~54.0.35",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",

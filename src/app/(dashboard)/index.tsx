@@ -6,6 +6,10 @@ import { ScannerCard } from '../../components/dashboard/ScannerCard';
 import { KPICard } from '../../components/dashboard/KPICard';
 import { ActivityList } from '../../components/dashboard/ActivityList';
 import { mockMetrics } from '../../data/mock';
+import { Button } from '../../components/ui/Button';
+import * as SecureStore from 'expo-secure-store';
+import * as Haptics from 'expo-haptics';
+import { useAuth } from '../auth-context';
 
 /**
  * Main dashboard screen with header, scanner CTA, KPI cards, and activity list.
@@ -14,6 +18,17 @@ import { mockMetrics } from '../../data/mock';
  */
 export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
+  const { setIsAuthenticated } = useAuth();
+
+  const handleUnlink = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await SecureStore.deleteItemAsync('secure_admin_api_key');
+      setIsAuthenticated(false);
+    } catch (e) {
+      console.error('Failed to unlink device', e);
+    }
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -66,6 +81,20 @@ export default function DashboardScreen() {
           className="mt-6"
         >
           <ActivityList />
+        </Animated.View>
+
+        {/* Unlink Session Button */}
+        <Animated.View
+          entering={FadeInDown.delay(400).duration(500).springify()}
+          className="mt-8 mb-6"
+        >
+          <Button
+            variant="destructive"
+            onPress={handleUnlink}
+            className="w-full"
+          >
+            Unlink Session
+          </Button>
         </Animated.View>
       </ScrollView>
     </View>

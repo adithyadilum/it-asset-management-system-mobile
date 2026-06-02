@@ -3,15 +3,9 @@ import { View, Text, Pressable, StyleSheet, Alert, SafeAreaView } from 'react-na
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-  FadeIn,
-} from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Colors } from '../../constants/colors';
+import { ScannerReticle } from '../../components/ui/ScannerReticle';
 
 type ScanMode = 'qr' | 'barcode';
 
@@ -24,24 +18,6 @@ export default function ScannerScreen() {
   const [mode, setMode] = useState<ScanMode>('qr');
   const [hasScanned, setHasScanned] = useState(false);
   const router = useRouter();
-
-  // Pulsing animation for scanner corners
-  const pulseOpacity = useSharedValue(1);
-
-  React.useEffect(() => {
-    pulseOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.4, { duration: 1000 }),
-        withTiming(1, { duration: 1000 })
-      ),
-      -1,
-      true
-    );
-  }, []);
-
-  const cornerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-  }));
 
   // Request permission on mount if needed
   React.useEffect(() => {
@@ -161,13 +137,7 @@ export default function ScannerScreen() {
 
         {/* Center — Scanner reticle */}
         <View className="flex-1 items-center justify-center">
-          <View style={styles.reticleContainer}>
-            {/* Corner brackets with pulse animation */}
-            <Animated.View style={[styles.corner, styles.topLeft, cornerAnimatedStyle]} />
-            <Animated.View style={[styles.corner, styles.topRight, cornerAnimatedStyle]} />
-            <Animated.View style={[styles.corner, styles.bottomLeft, cornerAnimatedStyle]} />
-            <Animated.View style={[styles.corner, styles.bottomRight, cornerAnimatedStyle]} />
-          </View>
+          <ScannerReticle />
         </View>
 
         {/* Bottom — Cancel button */}
@@ -183,10 +153,6 @@ export default function ScannerScreen() {
     </View>
   );
 }
-
-const RETICLE_SIZE = 250;
-const CORNER_SIZE = 40;
-const CORNER_THICKNESS = 4;
 
 const styles = StyleSheet.create({
   modeSelector: {
@@ -218,48 +184,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 16,
     textAlign: 'center',
-  },
-  reticleContainer: {
-    width: RETICLE_SIZE,
-    height: RETICLE_SIZE,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: CORNER_SIZE,
-    height: CORNER_SIZE,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderTopWidth: CORNER_THICKNESS,
-    borderLeftWidth: CORNER_THICKNESS,
-    borderColor: Colors.scannerCorner,
-    borderTopLeftRadius: 12,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: CORNER_THICKNESS,
-    borderRightWidth: CORNER_THICKNESS,
-    borderColor: Colors.scannerCorner,
-    borderTopRightRadius: 12,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: CORNER_THICKNESS,
-    borderLeftWidth: CORNER_THICKNESS,
-    borderColor: Colors.scannerCorner,
-    borderBottomLeftRadius: 12,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: CORNER_THICKNESS,
-    borderRightWidth: CORNER_THICKNESS,
-    borderColor: Colors.scannerCorner,
-    borderBottomRightRadius: 12,
   },
   cancelButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
