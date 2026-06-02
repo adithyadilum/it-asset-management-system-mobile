@@ -129,38 +129,48 @@ export default function ConnectScreen() {
 
   // Welcome Screen UI
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center px-8">
+    <View className="flex-1 bg-[#f8fafc]">
+      <View className="flex-1 items-center justify-center px-6">
         
-        {/* Logo Container */}
-        <View className="mb-12 items-center">
-          <View className="bg-white p-4 rounded-2xl shadow-sm mb-6 border border-border">
+        {/* Card */}
+        <View className="w-full bg-white rounded-xl pt-10 pb-10 px-8 shadow-sm border border-[#e2e8f0] items-center">
+          
+          {/* Logo Container */}
+          <View className="flex-row items-center justify-center mb-8">
             <Image 
               source={require('../../assets/tiqri-logo.png')} 
-              style={{ width: 140, height: 48 }}
+              style={{ width: 85, height: 28 }}
               resizeMode="contain"
             />
+            <Text className="text-[22px] font-sansBold text-[#040D5A] ml-0.5 mt-0.5 tracking-tight">Assets</Text>
           </View>
           
-          <Text className="text-3xl font-sansBold text-foreground tracking-tight text-center">
-            Device Pairing
+          <Text className="text-[19px] font-sansBold text-[#475569] text-center mb-2">
+            Welcome back
           </Text>
-          <Text className="text-base font-sans text-muted-foreground text-center mt-3">
-            Securely link your mobile device to your TIQRI IT Asset Management dashboard.
+          <Text className="text-[13px] font-sans text-[#64748b] text-center mb-8">
+            Scan QR code to link your device
           </Text>
+
+          {/* Primary Action Button */}
+          <TouchableOpacity 
+            className="w-full bg-[#040D5A] py-3 rounded-md flex-row items-center justify-center"
+            activeOpacity={0.8}
+            onPress={startScanning}
+          >
+            <Text className="text-white font-sans text-sm">
+              Scan to Login
+            </Text>
+          </TouchableOpacity>
+
         </View>
 
-        {/* Primary Action */}
-        <TouchableOpacity 
-          className="bg-primary w-full py-4 rounded-full flex-row items-center justify-center shadow-sm active:scale-95 transition-transform"
-          onPress={startScanning}
-        >
-          <Text className="text-primary-foreground font-sansBold text-lg">
-            Scan to Login
-          </Text>
-        </TouchableOpacity>
+        {/* Footer */}
+        <Text className="text-[11px] font-sans text-[#94a3b8] text-center mt-8">
+          Need help? Contact TIQRI IT Support
+        </Text>
 
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
