@@ -16,43 +16,43 @@ import "../../global.css"; // Move your global CSS import here!
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
 function atobPolyfill(input: string): string {
-  const str = input.replace(/=+$/, '');
-  let output = '';
+    const str = input.replace(/=+$/, '');
+    let output = '';
 
-  if (str.length % 4 === 1) {
-    throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
-  }
-
-  for (let bc = 0, bs = 0, buffer = 0, idx = 0; idx < str.length; idx++) {
-    const char = str.charAt(idx);
-    const pos = chars.indexOf(char);
-    if (pos === -1) continue;
-
-    buffer = (buffer << 6) + pos;
-    bc += 6;
-
-    if (bc >= 8) {
-      bc -= 8;
-      output += String.fromCharCode((buffer >> bc) & 0xff);
-      buffer &= (1 << bc) - 1;
+    if (str.length % 4 === 1) {
+        throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
     }
-  }
 
-  return output;
+    for (let bc = 0, bs = 0, buffer = 0, idx = 0; idx < str.length; idx++) {
+        const char = str.charAt(idx);
+        const pos = chars.indexOf(char);
+        if (pos === -1) continue;
+
+        buffer = (buffer << 6) + pos;
+        bc += 6;
+
+        if (bc >= 8) {
+            bc -= 8;
+            output += String.fromCharCode((buffer >> bc) & 0xff);
+            buffer &= (1 << bc) - 1;
+        }
+    }
+
+    return output;
 }
 
 function decodeJwt(token: string) {
-  try {
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = typeof atob === 'function' ? atob(base64) : atobPolyfill(base64);
-    return JSON.parse(decoded);
-  } catch (e) {
-    console.error('Error decoding JWT payload:', e);
-    return null;
-  }
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = typeof atob === 'function' ? atob(base64) : atobPolyfill(base64);
+        return JSON.parse(decoded);
+    } catch (e) {
+        console.error('Error decoding JWT payload:', e);
+        return null;
+    }
 }
 
 // Prevent the splash screen from hiding until fonts are loaded

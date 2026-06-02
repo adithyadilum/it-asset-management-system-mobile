@@ -1,12 +1,18 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, type PressableProps, Platform } from 'react-native';
+import {
+  Pressable,
+  Text,
+  StyleSheet,
+  View,
+  type PressableProps,
+  Platform,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { Colors } from '../../constants/colors';
 
 type ButtonVariant = 'default' | 'outline' | 'ghost' | 'destructive';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -16,48 +22,21 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   size?: ButtonSize;
   icon?: React.ReactNode;
   children: string;
-  className?: string;
-  textClassName?: string;
+  /** Extra style overrides for the outer wrapper View */
+  style?: object;
 }
-
-const variantClasses: Record<ButtonVariant, string> = {
-  default: 'bg-primary',
-  outline: 'bg-transparent border-2 border-primary',
-  ghost: 'bg-transparent',
-  destructive: 'bg-destructive',
-};
-
-const variantTextClasses: Record<ButtonVariant, string> = {
-  default: 'text-primary-foreground',
-  outline: 'text-primary',
-  ghost: 'text-primary',
-  destructive: 'text-destructive-foreground',
-};
-
-const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'px-4 py-2',
-  md: 'px-6 py-3',
-  lg: 'px-8 py-4',
-};
-
-const sizeTextClasses: Record<ButtonSize, string> = {
-  sm: 'text-xs',
-  md: 'text-sm',
-  lg: 'text-base',
-};
 
 /**
  * Pressable button with Reanimated spring scale animation on press.
+ * Uses plain StyleSheet — no NativeWind className dependency.
  * Supports variant (default/outline/ghost/destructive) and size (sm/md/lg).
- * Children must be a string — automatically wrapped in styled <Text>.
  */
 export function Button({
   variant = 'default',
   size = 'md',
   icon,
   children,
-  className = '',
-  textClassName = '',
+  style,
   disabled,
   ...props
 }: ButtonProps) {
@@ -76,34 +55,105 @@ export function Button({
   };
 
   return (
-    <AnimatedPressable
-      className={`flex-row items-center justify-center rounded-lg ${variantClasses[variant]} ${sizeClasses[size]} ${disabled ? 'opacity-50' : ''} ${className}`}
-      style={[animatedStyle, styles.button]}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled}
-      {...props}
-    >
-      {icon && <Animated.View className="mr-2">{icon}</Animated.View>}
-      <Text className={`font-sansBold ${variantTextClasses[variant]} ${sizeTextClasses[size]} ${textClassName}`}>
-        {children}
-      </Text>
-    </AnimatedPressable>
+    <View style={style}>
+      <Animated.View style={animatedStyle}>
+        <Pressable
+          style={[
+            styles.base,
+            variantStyles[variant],
+            sizeStyles[size],
+            disabled ? styles.disabled : null,
+            ...Platform.select({
+              ios: [shadow.ios],
+              android: [shadow.android],
+              default: [],
+            }),
+          ]}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={disabled}
+          {...props}
+        >
+          {icon && <View style={styles.iconWrapper}>{icon}</View>}
+          <Text style={[styles.baseText, variantTextStyles[variant], sizeTextStyles[size]]}>
+            {children}
+          </Text>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
+  base: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+  iconWrapper: {
+    marginRight: 8,
+  },
+  baseText: {
+    fontFamily: 'NotoSans_700Bold',
+  },
+});
+
+const variantStyles = StyleSheet.create({
+  default: {
+    backgroundColor: Colors.primary,
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+  },
+  destructive: {
+    backgroundColor: Colors.destructive,
+  },
+});
+
+const variantTextStyles = StyleSheet.create({
+  default: {
+    color: Colors.primaryForeground,
+  },
+  outline: {
+    color: Colors.primary,
+  },
+  ghost: {
+    color: Colors.primary,
+  },
+  destructive: {
+    color: Colors.destructiveForeground,
+  },
+});
+
+const sizeStyles = StyleSheet.create({
+  sm: { paddingHorizontal: 16, paddingVertical: 10 },
+  md: { paddingHorizontal: 24, paddingVertical: 14 },
+  lg: { paddingHorizontal: 32, paddingVertical: 18 },
+});
+
+const sizeTextStyles = StyleSheet.create({
+  sm: { fontSize: 13 },
+  md: { fontSize: 15 },
+  lg: { fontSize: 18 },
+});
+
+const shadow = StyleSheet.create({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  android: {
+    elevation: 2,
   },
 });
