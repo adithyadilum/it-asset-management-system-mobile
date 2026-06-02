@@ -1,17 +1,8 @@
-import { Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
 
+// The root layout handles the initial gateway and global redirect logic based on auth state.
+// Here we just redirect somewhere as a fallback so we don't stay on an empty screen.
+// By default, assume they need to connect. Root layout effect will correct this if they are authenticated.
 export default function App() {
-  return (
-    <View className="flex-1 items-center justify-center bg-background">
-      {/* Uses NotoSans_700Bold */}
-      <Text className="text-3xl font-sansBold text-primary">
-        Scanner Ready
-      </Text>
-
-      {/* Uses NotoSans_400Regular */}
-      <Text className="text-lg font-sans text-muted-foreground mt-2">
-        Please link your device to continue.
-      </Text>
-    </View>
-  );
+  return <Redirect href="/(auth)/connect" />;
 }
