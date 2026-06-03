@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions, Modal, TextInput } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
@@ -176,14 +176,18 @@ export default function ScannerScreen() {
         animationType="none"
         onRequestClose={closeBottomSheet}
       >
-        <Animated.View 
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(200)}
-          style={styles.bottomSheetContainer}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={StyleSheet.absoluteFillObject}
         >
-          <TouchableWithoutFeedback onPress={closeBottomSheet}>
-            <View style={StyleSheet.absoluteFillObject} />
-          </TouchableWithoutFeedback>
+          <Animated.View 
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(200)}
+            style={styles.bottomSheetContainer}
+          >
+            <TouchableWithoutFeedback onPress={closeBottomSheet}>
+              <View style={StyleSheet.absoluteFillObject} />
+            </TouchableWithoutFeedback>
 
           <Animated.View
             entering={SlideInDown.duration(300)}
@@ -311,6 +315,7 @@ export default function ScannerScreen() {
             ) : null}
           </Animated.View>
         </Animated.View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -371,7 +376,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   bottomSheetContainer: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.4)',
     zIndex: 10,
