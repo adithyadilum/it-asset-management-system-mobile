@@ -9,7 +9,7 @@ import { mockMetrics } from '../../data/mock';
 import { Button } from '../../components/ui/Button';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
-import { useAuth } from '../auth-context';
+import { useAuth } from '../../context/auth-context';
 import { LogOut } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 

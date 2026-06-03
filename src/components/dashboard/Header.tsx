@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../ui/Avatar';
 import { fetchUserProfile, type UserProfile } from '../../services/auth';
 import { Colors } from '../../constants/colors';
-import { useAuth } from '../../app/auth-context';
+import { useAuth } from '../../context/auth-context';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import * as Device from 'expo-device';

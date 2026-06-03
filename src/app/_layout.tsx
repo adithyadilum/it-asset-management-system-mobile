@@ -10,7 +10,7 @@ import {
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
 import { Pusher } from 'pusher-js/react-native';
-import { AuthContext } from './auth-context';
+import { AuthContext } from '../context/auth-context';
 import "../../global.css"; // Move your global CSS import here!
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';

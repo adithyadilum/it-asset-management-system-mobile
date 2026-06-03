@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Image, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Image, ScrollView, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { QrCode, Smartphone, Laptop, HelpCircle, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../auth-context';
+import { useAuth } from '../../context/auth-context';
 import { Button } from '../../components/ui/Button';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
@@ -136,7 +137,6 @@ export default function ConnectScreen() {
                   ]}
                   onPress={stopScanning}
                 >
-                  {/* ADD THIS INNER VIEW */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                     <X size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
                     <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -152,9 +152,12 @@ export default function ConnectScreen() {
 
   // ── Welcome Screen ──
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 justify-between px-6 py-6">
-
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Brand Header */}
         <Animated.View
           entering={FadeIn.duration(500)}
@@ -169,14 +172,14 @@ export default function ConnectScreen() {
           </View>
         </Animated.View>
 
-        {/* Middle content (no Card container) */}
+        {/* Middle content */}
         <Animated.View
           entering={FadeInDown.delay(100).duration(600)}
-          className="flex-1 justify-center py-6"
+          style={styles.middleContent}
         >
           {/* Welcome Text */}
-          <View className="items-center mb-8">
-            <View className="p-3.5 bg-primary/5 rounded-full mb-4">
+          <View style={styles.welcomeTextContainer}>
+            <View style={styles.smartphoneIconBadge}>
               <Smartphone size={32} color={Colors.primary} />
             </View>
             <Text style={styles.welcomeTitle}>
@@ -188,15 +191,15 @@ export default function ConnectScreen() {
           </View>
 
           {/* Setup Instructions Callout */}
-          <View className="bg-muted/40 border border-border/50 rounded-xl p-5 mb-8">
-            <View className="flex-row items-center mb-4">
+          <View style={styles.instructionsCallout}>
+            <View style={styles.instructionsHeader}>
               <Laptop size={16} color={Colors.mutedForeground} style={{ marginRight: 8 }} />
               <Text style={styles.instructionsTitle}>
                 Setup Instructions
               </Text>
             </View>
 
-            <View className="flex-row items-start mb-4">
+            <View style={styles.stepRow}>
               <View style={styles.stepNumberBadge}>
                 <Text style={styles.stepNumberText}>1</Text>
               </View>
@@ -205,7 +208,7 @@ export default function ConnectScreen() {
               </Text>
             </View>
 
-            <View className="flex-row items-start mb-4">
+            <View style={styles.stepRow}>
               <View style={styles.stepNumberBadge}>
                 <Text style={styles.stepNumberText}>2</Text>
               </View>
@@ -214,7 +217,7 @@ export default function ConnectScreen() {
               </Text>
             </View>
 
-            <View className="flex-row items-start">
+            <View style={styles.stepRowLast}>
               <View style={styles.stepNumberBadge}>
                 <Text style={styles.stepNumberText}>3</Text>
               </View>
@@ -239,11 +242,11 @@ export default function ConnectScreen() {
         {/* Footer */}
         <Animated.View
           entering={FadeIn.delay(300).duration(500)}
-          className="items-center pb-2"
+          style={styles.footerContainer}
         >
           <Pressable
             onPress={() => Alert.alert('Help & Support', 'For questions or troubleshooting, contact the IT service desk at support@tiqri.com or ext 4400.')}
-            className="flex-row items-center active:opacity-75"
+            style={styles.footerPressable}
           >
             <HelpCircle size={16} color={Colors.mutedForeground} style={{ marginRight: 6 }} />
             <Text style={styles.footerText}>
@@ -251,13 +254,67 @@ export default function ConnectScreen() {
             </Text>
           </Pressable>
         </Animated.View>
-
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  middleContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  welcomeTextContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  smartphoneIconBadge: {
+    padding: 14,
+    backgroundColor: 'rgba(4, 13, 90, 0.05)',
+    borderRadius: 100,
+    marginBottom: 16,
+  },
+  instructionsCallout: {
+    backgroundColor: 'rgba(241, 245, 249, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.5)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 28,
+  },
+  instructionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  stepRowLast: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  footerContainer: {
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  footerPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   scannerContainer: {
     flex: 1,
     backgroundColor: '#000000',
@@ -424,6 +481,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 22,
+    maxWidth: 300,
   },
   cancelButtonText: {
     color: '#FFFFFF',
