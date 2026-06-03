@@ -5,12 +5,13 @@ import { Header } from '../../components/dashboard/Header';
 import { ScannerCard } from '../../components/dashboard/ScannerCard';
 import { KPICard } from '../../components/dashboard/KPICard';
 import { ActivityList } from '../../components/dashboard/ActivityList';
-import { mockMetrics } from '../../data/mock';
 import { Button } from '../../components/ui/Button';
+import { fetchDashboardStats } from '../../services/dashboard';
+import type { KPIMetric } from '../../types';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/auth-context';
-import { LogOut } from 'lucide-react-native';
+import { LogOut, ClipboardList, CalendarClock } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 
 /**
@@ -22,6 +23,51 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { setIsAuthenticated } = useAuth();
+  
+  const [metrics, setMetrics] = useState<KPIMetric[]>([
+    {
+      label: 'My Assigned Assets',
+      value: 0,
+      icon: ClipboardList,
+      accentColor: Colors.info,
+      accentBg: Colors.infoLight,
+    },
+    {
+      label: 'Expiring Licenses',
+      value: 0,
+      icon: CalendarClock,
+      accentColor: Colors.warning,
+      accentBg: Colors.warningLight,
+    },
+  ]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const stats = await fetchDashboardStats();
+      setMetrics([
+        {
+          label: 'My Assigned Assets',
+          value: stats.assignedAssets,
+          icon: ClipboardList,
+          accentColor: Colors.info,
+          accentBg: Colors.infoLight,
+        },
+        {
+          label: 'Expiring Licenses',
+          value: stats.expiringLicenses,
+          icon: CalendarClock,
+          accentColor: Colors.warning,
+          accentBg: Colors.warningLight,
+        },
+      ]);
+    } catch (e) {
+      console.error('Failed to load dashboard stats:', e);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const handleUnlink = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -37,8 +83,10 @@ export default function DashboardScreen() {
     setRefreshing(true);
     // Bumping refreshKey causes ActivityList to remount and re-fetch
     setRefreshKey((k) => k + 1);
-    setTimeout(() => setRefreshing(false), 1500);
-  }, []);
+    loadStats().finally(() => {
+      setTimeout(() => setRefreshing(false), 1500);
+    });
+  }, [loadStats]);
 
   return (
     <View className="flex-1 bg-background">
@@ -71,7 +119,7 @@ export default function DashboardScreen() {
           className="mt-5"
         >
           <View className="flex-row gap-3">
-            {mockMetrics.map((metric, index) => (
+            {metrics.map((metric, index) => (
               <Animated.View
                 key={metric.label}
                 entering={FadeInDown.delay(200 + index * 50).duration(500).springify()}
