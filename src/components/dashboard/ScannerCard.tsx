@@ -7,13 +7,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { ScanLine } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
  * Large pressable scanner CTA card (~40% of viewport).
- * Navy gradient feel, camera icon, press animation via Reanimated.
+ * Navy gradient feel, ScanLine lucide icon, press animation via Reanimated.
  */
 export function ScannerCard() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export function ScannerCard() {
       {/* Content */}
       <View style={styles.content}>
         <View style={styles.iconCircle}>
-          <Text style={styles.cameraIcon}>📷</Text>
+          <ScanLine size={28} color="#FFFFFF" strokeWidth={1.75} />
         </View>
         <Text style={styles.title}>Launch Scanner</Text>
         <Text style={styles.subtitle}>
@@ -96,16 +97,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-  },
-  cameraIcon: {
-    fontSize: 24,
   },
   title: {
     fontSize: 20,

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { Bell } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 
 /**
@@ -16,9 +17,9 @@ export default function NotificationsScreen() {
         entering={FadeIn.duration(500)}
         className="flex-1 items-center justify-center px-8"
       >
-        {/* Icon */}
+        {/* Icon circle */}
         <View style={styles.iconCircle}>
-          <Text style={styles.icon}>🔔</Text>
+          <Bell size={36} color={Colors.warning} strokeWidth={1.75} />
         </View>
 
         {/* Heading */}
@@ -50,9 +51,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 36,
   },
   pill: {
     marginTop: 24,

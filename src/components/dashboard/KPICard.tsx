@@ -7,21 +7,18 @@ interface KPICardProps {
 }
 
 /**
- * KPI metric card with icon in a soft colored circle, label, and large bold number.
+ * KPI metric card with a Lucide icon in a soft colored circle, label, and large bold number.
  * Designed for side-by-side layout in a flex-row container.
  */
 export function KPICard({ metric }: KPICardProps) {
-  const iconMap: Record<string, string> = {
-    clipboard: '📋',
-    alert: '⚠️',
-  };
+  const IconComponent = metric.icon;
 
   return (
     <View style={styles.card} className="bg-card border border-border rounded-2xl">
       <View className="p-4">
         {/* Icon circle */}
         <View style={[styles.iconCircle, { backgroundColor: metric.accentBg }]}>
-          <Text style={styles.iconText}>{iconMap[metric.icon] || '•'}</Text>
+          <IconComponent size={20} color={metric.accentColor} strokeWidth={2} />
         </View>
 
         {/* Value */}
@@ -60,9 +57,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-  },
-  iconText: {
-    fontSize: 18,
   },
   value: {
     fontSize: 28,

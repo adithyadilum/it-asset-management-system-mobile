@@ -2,28 +2,45 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { Home, Package, Bell } from 'lucide-react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Colors } from '../../constants/colors';
 
-const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
-  index: { active: '🏠', inactive: '🏠' },
-  'my-assets': { active: '📋', inactive: '📋' },
-  notifications: { active: '🔔', inactive: '🔔' },
+type TabIconProps = {
+  routeName: string;
+  isFocused: boolean;
 };
+
+function TabIcon({ routeName, isFocused }: TabIconProps) {
+  const color = isFocused ? Colors.tabActive : Colors.tabInactive;
+  const size = 22;
+  const strokeWidth = isFocused ? 2.25 : 1.75;
+
+  switch (routeName) {
+    case 'index':
+      return <Home size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'my-assets':
+      return <Package size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'notifications':
+      return <Bell size={size} color={color} strokeWidth={strokeWidth} />;
+    default:
+      return null;
+  }
+}
 
 const TAB_LABELS: Record<string, string> = {
   index: 'Home',
   'my-assets': 'My Assets',
-  notifications: 'Notifications',
+  notifications: 'Alerts',
 };
 
 /**
  * Custom bottom tab bar with:
  * - Clean white background + subtle top border
- * - Active tab: navy icon + label
- * - Inactive tab: muted gray icon + text
+ * - Active tab: navy Lucide icon + label (bolder stroke)
+ * - Inactive tab: muted gray Lucide icon + text
  * - Red notification dot on bell icon
- * - SafeAreaView bottom padding for notched devices
+ * - SafeAreaView bottom padding for notched devices (iOS & Android)
  */
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -41,7 +58,6 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         // Skip scanner route from tab bar
         if (routeName === 'scanner') return null;
 
-        const icons = TAB_ICONS[routeName] || { active: '•', inactive: '•' };
         const label = TAB_LABELS[routeName] || routeName;
 
         const onPress = async () => {
@@ -75,9 +91,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             style={styles.tab}
           >
             <View style={styles.iconContainer}>
-              <Text style={[styles.icon, { opacity: isFocused ? 1 : 0.5 }]}>
-                {isFocused ? icons.active : icons.inactive}
-              </Text>
+              <TabIcon routeName={routeName} isFocused={isFocused} />
               {/* Notification badge dot */}
               {routeName === 'notifications' && (
                 <View style={styles.badgeDot} />
@@ -127,9 +141,6 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'relative',
-  },
-  icon: {
-    fontSize: 22,
   },
   badgeDot: {
     position: 'absolute',

@@ -3,6 +3,8 @@
  * Shaped for future API integration — swap mock data for real responses seamlessly.
  */
 
+import type { LucideIcon } from 'lucide-react-native';
+
 export interface User {
   id: string;
   name: string;
@@ -36,7 +38,8 @@ export interface ActivityEvent {
 export interface KPIMetric {
   label: string;
   value: number;
-  icon: string;
+  /** Lucide icon component to render inside the icon circle */
+  icon: LucideIcon;
   accentColor: string;
   accentBg: string;
 }

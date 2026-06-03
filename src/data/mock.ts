@@ -5,6 +5,7 @@
 
 import type { User, KPIMetric, ActivityEvent } from '../types';
 import { Colors } from '../constants/colors';
+import { ClipboardList, AlertTriangle } from 'lucide-react-native';
 
 export const mockUser: User = {
   id: 'usr-001',
@@ -18,14 +19,14 @@ export const mockMetrics: KPIMetric[] = [
   {
     label: 'My Assigned Assets',
     value: 3,
-    icon: 'clipboard',
+    icon: ClipboardList,
     accentColor: Colors.info,
     accentBg: Colors.infoLight,
   },
   {
     label: 'Pending Approvals',
     value: 12,
-    icon: 'alert',
+    icon: AlertTriangle,
     accentColor: Colors.warning,
     accentBg: Colors.warningLight,
   },
