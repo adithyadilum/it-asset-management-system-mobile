@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOutDown, SlideInDown, SlideOutDown, FadeOut } from 'react-native-reanimated';
-import { Laptop, MapPin, User, X } from 'lucide-react-native';
+import { Laptop, MapPin, User, X, ChevronLeft } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
 import { fetchScannedAssetDetails } from '../../services/scan';
@@ -23,6 +23,8 @@ export default function ScannerScreen() {
   const [hasScanned, setHasScanned] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [scannedAsset, setScannedAsset] = useState<AssetDetailsData | null>(null);
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [issueNote, setIssueNote] = useState('');
   const router = useRouter();
 
   // Request permission on mount if needed
@@ -65,6 +67,8 @@ export default function ScannerScreen() {
   const closeBottomSheet = () => {
     setScannedAsset(null);
     setHasScanned(false);
+    setShowReportForm(false);
+    setIssueNote('');
   };
 
   if (!permission?.granted) {
@@ -195,72 +199,114 @@ export default function ScannerScreen() {
               </View>
             ) : scannedAsset ? (
               <View className="px-6 pb-6 pt-2">
-                <View className="flex-row justify-between items-start">
-                  <View>
-                    <Text className="text-2xl font-['NotoSans_700Bold'] text-slate-900 mb-1">
-                      {scannedAsset.asset.assetTag}
+                {!showReportForm ? (
+                  <>
+                    <View className="flex-row justify-between items-start">
+                      <View>
+                        <Text className="text-2xl font-['NotoSans_700Bold'] text-slate-900 mb-1">
+                          {scannedAsset.asset.assetTag}
+                        </Text>
+                        <View className="flex-row items-center">
+                          <View 
+                            className="w-2 h-2 rounded-full mr-2" 
+                            style={{ 
+                              backgroundColor: scannedAsset.asset.status.toLowerCase() === 'available' ? '#10b981' : 
+                                               scannedAsset.asset.status.toLowerCase() === 'assigned' ? '#3b82f6' : '#ef4444' 
+                            }} 
+                          />
+                          <Text className="font-['NotoSans_600SemiBold'] text-[15px]"
+                                style={{
+                                  color: scannedAsset.asset.status.toLowerCase() === 'available' ? '#10b981' : 
+                                         scannedAsset.asset.status.toLowerCase() === 'assigned' ? '#3b82f6' : '#ef4444'
+                                }}>
+                            {scannedAsset.asset.status}
+                          </Text>
+                        </View>
+                      </View>
+                      <View className="bg-[#e2e8f0]/60 p-3 rounded-xl">
+                        <Laptop size={28} color="#1e293b" />
+                      </View>
+                    </View>
+
+                    <Text className="text-slate-500 font-['NotoSans_600SemiBold'] text-base mt-8 mb-4">
+                      Asset Details
                     </Text>
-                    <View className="flex-row items-center">
-                      <View 
-                        className="w-2 h-2 rounded-full mr-2" 
-                        style={{ 
-                          backgroundColor: scannedAsset.asset.status.toLowerCase() === 'available' ? '#10b981' : 
-                                           scannedAsset.asset.status.toLowerCase() === 'assigned' ? '#3b82f6' : '#ef4444' 
-                        }} 
-                      />
-                      <Text className="font-['NotoSans_600SemiBold'] text-[15px]"
-                            style={{
-                              color: scannedAsset.asset.status.toLowerCase() === 'available' ? '#10b981' : 
-                                     scannedAsset.asset.status.toLowerCase() === 'assigned' ? '#3b82f6' : '#ef4444'
-                            }}>
-                        {scannedAsset.asset.status}
+
+                    <View className="gap-y-6">
+                      <View className="flex-row items-center">
+                        <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                          <Laptop size={20} color="#64748b" />
+                        </View>
+                        <View>
+                          <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Model</Text>
+                          <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.model.name}</Text>
+                        </View>
+                      </View>
+
+                      <View className="flex-row items-center">
+                        <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                          <MapPin size={20} color="#64748b" />
+                        </View>
+                        <View>
+                          <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Location</Text>
+                          <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.location?.name || 'Unknown'}</Text>
+                        </View>
+                      </View>
+
+                      <View className="flex-row items-center">
+                        <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                          <User size={20} color="#64748b" />
+                        </View>
+                        <View>
+                          <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Custodian</Text>
+                          <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.assignment?.assignedToUser?.name || '-'}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-8 active:opacity-90"
+                      onPress={() => setShowReportForm(true)}
+                    >
+                      <Text className="text-white text-[16px] font-['NotoSans_700Bold']">Report An Issue</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <View className="flex-row items-center mb-6">
+                      <Pressable
+                        onPress={() => setShowReportForm(false)}
+                        className="mr-3 p-1"
+                      >
+                        <ChevronLeft size={24} color="#1e293b" />
+                      </Pressable>
+                      <Text className="text-xl font-['NotoSans_700Bold'] text-slate-900">
+                        Report an Issue
                       </Text>
                     </View>
-                  </View>
-                  <View className="bg-[#e2e8f0]/60 p-3 rounded-xl">
-                    <Laptop size={28} color="#1e293b" />
-                  </View>
-                </View>
 
-                <Text className="text-slate-500 font-['NotoSans_600SemiBold'] text-base mt-8 mb-4">
-                  Asset Details
-                </Text>
+                    <Text className="text-slate-500 text-sm font-['NotoSans_500Medium'] mb-2">
+                      {scannedAsset.asset.assetTag} · {scannedAsset.model.name}
+                    </Text>
 
-                <View className="gap-y-6">
-                  <View className="flex-row items-center">
-                    <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
-                      <Laptop size={20} color="#64748b" />
-                    </View>
-                    <View>
-                      <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Model</Text>
-                      <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.model.name}</Text>
-                    </View>
-                  </View>
+                    <TextInput
+                      style={styles.issueTextArea}
+                      multiline
+                      numberOfLines={6}
+                      textAlignVertical="top"
+                      placeholder="Describe any issues, damages or missing parts..."
+                      placeholderTextColor="#94a3b8"
+                      value={issueNote}
+                      onChangeText={setIssueNote}
+                    />
 
-                  <View className="flex-row items-center">
-                    <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
-                      <MapPin size={20} color="#64748b" />
-                    </View>
-                    <View>
-                      <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Location</Text>
-                      <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.location?.name || 'Unknown'}</Text>
-                    </View>
-                  </View>
-
-                  <View className="flex-row items-center">
-                    <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
-                      <User size={20} color="#64748b" />
-                    </View>
-                    <View>
-                      <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Custodian</Text>
-                      <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.assignment?.assignedToUser?.name || '-'}</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <Pressable className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-8 active:opacity-90">
-                  <Text className="text-white text-[16px] font-['NotoSans_700Bold']">Report An Issue</Text>
-                </Pressable>
+                    <Pressable
+                      className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-6 active:opacity-90"
+                    >
+                      <Text className="text-white text-[16px] font-['NotoSans_700Bold']">Submit Report</Text>
+                    </Pressable>
+                  </>
+                )}
               </View>
             ) : null}
           </Animated.View>
@@ -337,5 +383,17 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     width: '100%',
     minHeight: 400,
+  },
+  issueTextArea: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16,
+    fontSize: 15,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#1e293b',
+    minHeight: 140,
+    marginTop: 8,
   },
 });
