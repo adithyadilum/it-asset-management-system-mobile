@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
@@ -166,7 +166,12 @@ export default function ScannerScreen() {
       </SafeAreaView>
 
       {/* Bottom Sheet Overlay */}
-      {(isLoading || scannedAsset) && (
+      <Modal
+        visible={isLoading || scannedAsset !== null}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeBottomSheet}
+      >
         <Animated.View 
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(200)}
@@ -177,8 +182,8 @@ export default function ScannerScreen() {
           </TouchableWithoutFeedback>
 
           <Animated.View
-            entering={SlideInDown.springify().damping(20).stiffness(150)}
-            exiting={SlideOutDown}
+            entering={SlideInDown.duration(300)}
+            exiting={SlideOutDown.duration(200)}
             style={styles.bottomSheet}
           >
             <View className="w-12 h-1 bg-slate-200 rounded-full mt-4 mb-2 self-center" />
@@ -260,7 +265,7 @@ export default function ScannerScreen() {
             ) : null}
           </Animated.View>
         </Animated.View>
-      )}
+      </Modal>
     </View>
   );
 }
@@ -331,5 +336,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingBottom: 40,
     width: '100%',
+    minHeight: 400,
   },
 });
