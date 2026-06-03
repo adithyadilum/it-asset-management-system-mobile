@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import type { KPIMetric } from '../../types';
 
 interface KPICardProps {
@@ -7,30 +7,28 @@ interface KPICardProps {
 }
 
 /**
- * KPI metric card with a Lucide icon in a soft colored circle, label, and large bold number.
+ * KPI metric card — flat, borderless surface with a soft accent icon circle.
  * Designed for side-by-side layout in a flex-row container.
  */
 export function KPICard({ metric }: KPICardProps) {
   const IconComponent = metric.icon;
 
   return (
-    <View style={styles.card} className="bg-card border border-border rounded-2xl">
-      <View className="p-4">
-        {/* Icon circle */}
-        <View style={[styles.iconCircle, { backgroundColor: metric.accentBg }]}>
-          <IconComponent size={20} color={metric.accentColor} strokeWidth={2} />
-        </View>
-
-        {/* Value */}
-        <Text style={[styles.value, { color: metric.accentColor }]}>
-          {metric.value}
-        </Text>
-
-        {/* Label */}
-        <Text className="text-xs font-sans text-muted-foreground mt-1" numberOfLines={2}>
-          {metric.label}
-        </Text>
+    <View style={[styles.card, { backgroundColor: metric.accentBg }]}>
+      {/* Icon circle */}
+      <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.65)' }]}>
+        <IconComponent size={18} color={metric.accentColor} strokeWidth={2} />
       </View>
+
+      {/* Value */}
+      <Text style={[styles.value, { color: metric.accentColor }]}>
+        {metric.value}
+      </Text>
+
+      {/* Label */}
+      <Text style={[styles.label, { color: metric.accentColor }]} numberOfLines={2}>
+        {metric.label}
+      </Text>
     </View>
   );
 }
@@ -38,22 +36,13 @@ export function KPICard({ metric }: KPICardProps) {
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
+    borderRadius: 16,
+    padding: 16,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -61,5 +50,13 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 28,
     fontFamily: 'NotoSans_700Bold',
+    lineHeight: 32,
+  },
+  label: {
+    fontSize: 12,
+    fontFamily: 'NotoSans_400Regular',
+    marginTop: 4,
+    lineHeight: 16,
+    opacity: 0.75,
   },
 });

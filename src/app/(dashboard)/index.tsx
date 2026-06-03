@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, ScrollView, RefreshControl } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Header } from '../../components/dashboard/Header';
@@ -10,14 +10,17 @@ import { Button } from '../../components/ui/Button';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../auth-context';
+import { LogOut } from 'lucide-react-native';
+import { Colors } from '../../constants/colors';
 
 /**
- * Main dashboard screen with header, scanner CTA, KPI cards, and activity list.
+ * Main dashboard screen with header, scanner CTA, KPI cards, and live activity feed.
  * Staggered fade-in animations for each section.
- * Pull-to-refresh ready for future API integration.
+ * Pull-to-refresh triggers a reload of the activity list.
  */
 export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { setIsAuthenticated } = useAuth();
 
   const handleUnlink = async () => {
@@ -32,7 +35,8 @@ export default function DashboardScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // Simulate refresh — future: re-fetch from API
+    // Bumping refreshKey causes ActivityList to remount and re-fetch
+    setRefreshKey((k) => k + 1);
     setTimeout(() => setRefreshing(false), 1500);
   }, []);
 
@@ -43,10 +47,14 @@ export default function DashboardScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+          />
         }
       >
         {/* Scanner CTA Card */}
@@ -75,25 +83,27 @@ export default function DashboardScreen() {
           </View>
         </Animated.View>
 
-        {/* Recent Activities */}
+        {/* Live Activity Feed */}
         <Animated.View
           entering={FadeInDown.delay(300).duration(500).springify()}
           className="mt-6"
         >
-          <ActivityList />
+          <ActivityList key={refreshKey} />
         </Animated.View>
 
-        {/* Unlink Session Button */}
+        {/* Unlink Session */}
         <Animated.View
           entering={FadeInDown.delay(400).duration(500).springify()}
           className="mt-8 mb-6"
         >
           <Button
-            variant="destructive"
+            variant="outline"
             onPress={handleUnlink}
+            icon={<LogOut size={16} color={Colors.destructive} />}
             className="w-full"
+            style={{ borderColor: Colors.destructive }}
           >
-            Unlink Session
+            Unlink Device
           </Button>
         </Animated.View>
       </ScrollView>
