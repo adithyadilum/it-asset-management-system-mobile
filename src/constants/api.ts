@@ -14,6 +14,7 @@ export const ENDPOINTS = {
   assets: '/api/assets',
   assetById: (id: string) => `/api/assets/${id}`,
   assetByTag: (tag: string) => `/api/assets/tag/${tag}`,
+  myAssets: '/api/v1/assets/my-assets',
 
   // Dashboard
   dashboard: '/api/dashboard',
