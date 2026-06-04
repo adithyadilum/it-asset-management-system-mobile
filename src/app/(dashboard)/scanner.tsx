@@ -8,7 +8,7 @@ import Animated, { FadeIn, FadeInDown, FadeOutDown, SlideInDown, SlideOutDown, F
 import { Laptop, MapPin, User, X, ChevronLeft } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
-import { fetchScannedAssetDetails } from '../../services/scan';
+import { fetchScannedAssetDetails, injectBarcode } from '../../services/scan';
 import { reportAssetIssue } from '../../services/issues';
 import { AssetDetailsData } from '../../types/asset';
 
@@ -38,13 +38,40 @@ export default function ScannerScreen() {
 
   const barcodeTypes = mode === 'qr'
     ? ['qr'] as const
-    : ['code128', 'code39', 'ean13', 'ean8'] as const;
+    : ['code128', 'code39', 'upc_a', 'upc_e', 'ean13', 'ean8'] as const;
 
   const handleBarCodeScanned = async ({ data, type }: { data: string; type: string }) => {
     if (hasScanned) return;
     setHasScanned(true);
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (mode === 'barcode') {
+      if (!data || data.trim().length === 0) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Invalid barcode', 'The barcode could not be read clearly.', [
+          { text: 'Try Again', onPress: () => setHasScanned(false) }
+        ]);
+        return;
+      }
+      setIsLoading(true);
+      const result = await injectBarcode(data);
+      setIsLoading(false);
+
+      if (result.success) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Success', 'Barcode injected successfully', [
+          { text: 'OK', onPress: () => setHasScanned(false) }
+        ]);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Invalid barcode', result.error || 'Failed to inject barcode', [
+          { text: 'Try Again', onPress: () => setHasScanned(false) }
+        ]);
+      }
+      return;
+    }
+
     setIsLoading(true);
 
     const result = await fetchScannedAssetDetails(data);
@@ -113,6 +140,7 @@ export default function ScannerScreen() {
   return (
     <View className="flex-1 bg-black">
       <CameraView
+        key={mode}
         style={StyleSheet.absoluteFillObject}
         facing="back"
         onBarcodeScanned={hasScanned ? undefined : handleBarCodeScanned}
