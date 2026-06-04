@@ -9,7 +9,7 @@ import {
     NotoSans_400Regular,
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
-import Pusher from 'pusher-js/react-native';
+import { Pusher } from 'pusher-js/react-native';
 import { AuthContext } from '../context/auth-context';
 import { decodeJwt } from '../lib/jwt';
 import "../../global.css"; // Move your global CSS import here!
