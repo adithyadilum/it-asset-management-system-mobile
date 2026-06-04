@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/Button';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
 import { exchangeMobileToken } from '../../services/auth';
+import { decodeJwt } from '../../lib/jwt';
 
 const SCANNER_SIZE = 260;
 
@@ -30,6 +31,20 @@ export default function ConnectScreen() {
 
     try {
       const token = await exchangeMobileToken(data);
+
+      // Defence-in-depth: verify the role embedded in the JWT before storing it.
+      // The backend already rejects non-admin users with a 403, but this check
+      // provides a clear, user-facing error if the token somehow has the wrong role.
+      const payload = decodeJwt(token);
+      if (payload?.role !== 'GlobalAdmin') {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(
+          'Access Denied',
+          'This app is restricted to Global Administrators. Your account does not have the required permissions.',
+          [{ text: 'OK', onPress: () => { setIsScanning(false); setIsLoading(false); } }]
+        );
+        return;
+      }
 
       await SecureStore.setItemAsync('secure_admin_api_key', token);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

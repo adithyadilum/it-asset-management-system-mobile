@@ -30,8 +30,8 @@ export const Colors = {
 
   // Destructive
   destructive: '#EF4444',
+  destructiveLight: '#FEE2E2',
   destructiveForeground: '#FFFFFF',
-
   // Success
   success: '#65A30D',
   successForeground: '#FFFFFF',
