@@ -9,6 +9,7 @@ import { Laptop, MapPin, User, X, ChevronLeft } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
 import { fetchScannedAssetDetails } from '../../services/scan';
+import { reportAssetIssue } from '../../services/issues';
 import { AssetDetailsData } from '../../types/asset';
 
 type ScanMode = 'qr' | 'barcode';
@@ -25,6 +26,7 @@ export default function ScannerScreen() {
   const [scannedAsset, setScannedAsset] = useState<AssetDetailsData | null>(null);
   const [showReportForm, setShowReportForm] = useState(false);
   const [issueNote, setIssueNote] = useState('');
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
   const router = useRouter();
 
   // Request permission on mount if needed
@@ -65,10 +67,31 @@ export default function ScannerScreen() {
   };
 
   const closeBottomSheet = () => {
+    if (isSubmittingIssue) return;
     setScannedAsset(null);
     setHasScanned(false);
     setShowReportForm(false);
     setIssueNote('');
+  };
+
+  const handleSubmitIssue = async () => {
+    if (!scannedAsset || !issueNote.trim()) return;
+
+    setIsSubmittingIssue(true);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const result = await reportAssetIssue(scannedAsset.asset.id, issueNote);
+
+    setIsSubmittingIssue(false);
+
+    if (result.success) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Success', 'Issue reported successfully.');
+      closeBottomSheet();
+    } else {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', result.error || 'Failed to report issue.');
+    }
   };
 
   if (!permission?.granted) {
@@ -305,9 +328,15 @@ export default function ScannerScreen() {
                     />
 
                     <Pressable
-                      className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-6 active:opacity-90"
+                      className={`bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-6 active:opacity-90 ${isSubmittingIssue || !issueNote.trim() ? 'opacity-50' : ''}`}
+                      onPress={handleSubmitIssue}
+                      disabled={isSubmittingIssue || !issueNote.trim()}
                     >
-                      <Text className="text-white text-[16px] font-['NotoSans_700Bold']">Submit Report</Text>
+                      {isSubmittingIssue ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <Text className="text-white text-[16px] font-['NotoSans_700Bold']">Submit Report</Text>
+                      )}
                     </Pressable>
                   </>
                 )}
