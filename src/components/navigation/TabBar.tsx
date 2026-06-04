@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { Home, Package, Bell } from 'lucide-react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Colors } from '../../constants/colors';
+import { useNotifications } from '../../context/notifications-context';
 
 type TabIconProps = {
   routeName: string;
@@ -41,6 +42,7 @@ const TAB_LABELS: Record<string, string> = {
  */
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { unreadCount } = useNotifications();
 
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
@@ -90,8 +92,12 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               {/* Icon with notification badge */}
               <View style={styles.iconWrap}>
                 <TabIcon routeName={routeName} isFocused={isFocused} />
-                {routeName === 'notifications' && (
-                  <View style={styles.badgeDot} />
+                {routeName === 'notifications' && unreadCount > 0 && (
+                  <View style={styles.badgeDot}>
+                    <Text style={styles.badgeText}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
                 )}
               </View>
 
@@ -148,14 +154,23 @@ const styles = StyleSheet.create({
   },
   badgeDot: {
     position: 'absolute',
-    top: -2,
-    right: -4,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: Colors.notificationBadge,
-    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1,
     borderColor: Colors.card,
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 8,
+    fontFamily: 'NotoSans_700Bold',
+    textAlign: 'center',
   },
   label: {
     fontSize: 10,
