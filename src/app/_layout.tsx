@@ -9,8 +9,9 @@ import {
     NotoSans_400Regular,
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
-import { Pusher } from 'pusher-js/react-native';
+import Pusher from 'pusher-js/react-native';
 import { AuthContext } from '../context/auth-context';
+import { NotificationsProvider } from '../context/notifications-context';
 import "../../global.css"; // Move your global CSS import here!
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
@@ -185,11 +186,13 @@ export default function RootLayout() {
 
     return (
         <AuthContext.Provider value={{ setIsAuthenticated }}>
-            <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
-            </Stack>
+            <NotificationsProvider>
+                <StatusBar style="dark" />
+                <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                    <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
+                </Stack>
+            </NotificationsProvider>
         </AuthContext.Provider>
     );
 }
