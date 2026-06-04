@@ -11,49 +11,8 @@ import {
 } from '@expo-google-fonts/noto-sans';
 import { Pusher } from 'pusher-js/react-native';
 import { AuthContext } from '../context/auth-context';
+import { decodeJwt } from '../lib/jwt';
 import "../../global.css"; // Move your global CSS import here!
-
-const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-
-function atobPolyfill(input: string): string {
-    const str = input.replace(/=+$/, '');
-    let output = '';
-
-    if (str.length % 4 === 1) {
-        throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
-    }
-
-    for (let bc = 0, bs = 0, buffer = 0, idx = 0; idx < str.length; idx++) {
-        const char = str.charAt(idx);
-        const pos = chars.indexOf(char);
-        if (pos === -1) continue;
-
-        buffer = (buffer << 6) + pos;
-        bc += 6;
-
-        if (bc >= 8) {
-            bc -= 8;
-            output += String.fromCharCode((buffer >> bc) & 0xff);
-            buffer &= (1 << bc) - 1;
-        }
-    }
-
-    return output;
-}
-
-function decodeJwt(token: string) {
-    try {
-        const parts = token.split('.');
-        if (parts.length < 2) return null;
-        const base64Url = parts[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const decoded = typeof atob === 'function' ? atob(base64) : atobPolyfill(base64);
-        return JSON.parse(decoded);
-    } catch (e) {
-        console.error('Error decoding JWT payload:', e);
-        return null;
-    }
-}
 
 // Prevent the splash screen from hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -74,7 +33,21 @@ export default function RootLayout() {
         async function checkAuth() {
             try {
                 const key = await SecureStore.getItemAsync('secure_admin_api_key');
-                setIsAuthenticated(!!key);
+                if (key) {
+                    // Runtime role guard: validate the stored JWT contains a GlobalAdmin role.
+                    // This evicts any stale or non-admin token that may have been stored
+                    // before this RBAC enforcement was in place.
+                    const payload = decodeJwt(key);
+                    if (payload?.role !== 'GlobalAdmin') {
+                        console.warn('[Auth] Stored token has non-admin role. Evicting.');
+                        await SecureStore.deleteItemAsync('secure_admin_api_key');
+                        setIsAuthenticated(false);
+                    } else {
+                        setIsAuthenticated(true);
+                    }
+                } else {
+                    setIsAuthenticated(false);
+                }
             } catch (e) {
                 console.error('Error reading from SecureStore', e);
                 setIsAuthenticated(false);

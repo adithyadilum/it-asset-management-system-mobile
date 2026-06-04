@@ -5,12 +5,13 @@ import { Header } from '../../components/dashboard/Header';
 import { ScannerCard } from '../../components/dashboard/ScannerCard';
 import { KPICard } from '../../components/dashboard/KPICard';
 import { ActivityList } from '../../components/dashboard/ActivityList';
-import { mockMetrics } from '../../data/mock';
 import { Button } from '../../components/ui/Button';
+import { fetchDashboardStats } from '../../services/dashboard';
+import type { KPIMetric } from '../../types';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/auth-context';
-import { LogOut } from 'lucide-react-native';
+import { LogOut, Trash2, CalendarClock, AlertTriangle, ShieldAlert } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 
 /**
@@ -22,6 +23,55 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { setIsAuthenticated } = useAuth();
+  
+  const [metrics, setMetrics] = useState<KPIMetric[]>([
+    {
+      label: 'Pending Disposals',
+      value: 0,
+      icon: Trash2,
+      accentColor: Colors.warning,
+      accentBg: Colors.warningLight,
+    },
+    {
+      label: 'Software Renewals',
+      value: 0,
+      icon: CalendarClock,
+      accentColor: Colors.info,
+      accentBg: Colors.infoLight,
+    },
+    {
+      label: 'Overdue Returns',
+      value: 0,
+      icon: AlertTriangle,
+      accentColor: Colors.destructive,
+      accentBg: Colors.destructiveLight,
+    },
+    {
+      label: 'Warranty Expiry',
+      value: 0,
+      icon: ShieldAlert,
+      accentColor: Colors.success,
+      accentBg: Colors.successLight,
+    },
+  ]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const stats = await fetchDashboardStats();
+      setMetrics((prev) => [
+        { ...prev[0], value: stats.pendingDisposals },
+        { ...prev[1], value: stats.softwareRenewals },
+        { ...prev[2], value: stats.overdueReturns },
+        { ...prev[3], value: stats.warrantyExpiry },
+      ]);
+    } catch (e) {
+      console.error('Failed to load dashboard stats:', e);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const handleUnlink = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -37,8 +87,10 @@ export default function DashboardScreen() {
     setRefreshing(true);
     // Bumping refreshKey causes ActivityList to remount and re-fetch
     setRefreshKey((k) => k + 1);
-    setTimeout(() => setRefreshing(false), 1500);
-  }, []);
+    loadStats().finally(() => {
+      setTimeout(() => setRefreshing(false), 1500);
+    });
+  }, [loadStats]);
 
   return (
     <View className="flex-1 bg-background">
@@ -70,16 +122,29 @@ export default function DashboardScreen() {
           entering={FadeInDown.delay(200).duration(500).springify()}
           className="mt-5"
         >
-          <View className="flex-row gap-3">
-            {mockMetrics.map((metric, index) => (
-              <Animated.View
-                key={metric.label}
-                entering={FadeInDown.delay(200 + index * 50).duration(500).springify()}
-                style={{ flex: 1 }}
-              >
-                <KPICard metric={metric} />
-              </Animated.View>
-            ))}
+          <View className="gap-3">
+            <View className="flex-row gap-3">
+              {metrics.slice(0, 2).map((metric, index) => (
+                <Animated.View
+                  key={metric.label}
+                  entering={FadeInDown.delay(200 + index * 50).duration(500).springify()}
+                  style={{ flex: 1 }}
+                >
+                  <KPICard metric={metric} />
+                </Animated.View>
+              ))}
+            </View>
+            <View className="flex-row gap-3">
+              {metrics.slice(2, 4).map((metric, index) => (
+                <Animated.View
+                  key={metric.label}
+                  entering={FadeInDown.delay(300 + index * 50).duration(500).springify()}
+                  style={{ flex: 1 }}
+                >
+                  <KPICard metric={metric} />
+                </Animated.View>
+              ))}
+            </View>
           </View>
         </Animated.View>
 
@@ -89,22 +154,6 @@ export default function DashboardScreen() {
           className="mt-6"
         >
           <ActivityList key={refreshKey} />
-        </Animated.View>
-
-        {/* Unlink Session */}
-        <Animated.View
-          entering={FadeInDown.delay(400).duration(500).springify()}
-          className="mt-8 mb-6"
-        >
-          <Button
-            variant="outline"
-            onPress={handleUnlink}
-            icon={<LogOut size={16} color={Colors.destructive} />}
-            className="w-full"
-            style={{ borderColor: Colors.destructive }}
-          >
-            Unlink Device
-          </Button>
         </Animated.View>
       </ScrollView>
     </View>
