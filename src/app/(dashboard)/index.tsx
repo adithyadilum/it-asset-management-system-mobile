@@ -155,22 +155,6 @@ export default function DashboardScreen() {
         >
           <ActivityList key={refreshKey} />
         </Animated.View>
-
-        {/* Unlink Session */}
-        <Animated.View
-          entering={FadeInDown.delay(400).duration(500).springify()}
-          className="mt-8 mb-6"
-        >
-          <Button
-            variant="outline"
-            onPress={handleUnlink}
-            icon={<LogOut size={16} color={Colors.destructive} />}
-            className="w-full"
-            style={{ borderColor: Colors.destructive }}
-          >
-            Unlink Device
-          </Button>
-        </Animated.View>
       </ScrollView>
     </View>
   );
