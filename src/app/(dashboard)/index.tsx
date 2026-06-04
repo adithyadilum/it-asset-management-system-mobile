@@ -58,35 +58,11 @@ export default function DashboardScreen() {
   const loadStats = useCallback(async () => {
     try {
       const stats = await fetchDashboardStats();
-      setMetrics([
-        {
-          label: 'Pending Disposals',
-          value: stats.pendingDisposals,
-          icon: Trash2,
-          accentColor: Colors.warning,
-          accentBg: Colors.warningLight,
-        },
-        {
-          label: 'Software Renewals',
-          value: stats.softwareRenewals,
-          icon: CalendarClock,
-          accentColor: Colors.info,
-          accentBg: Colors.infoLight,
-        },
-        {
-          label: 'Overdue Returns',
-          value: stats.overdueReturns,
-          icon: AlertTriangle,
-          accentColor: Colors.destructive,
-          accentBg: Colors.destructiveLight,
-        },
-        {
-          label: 'Warranty Expiry',
-          value: stats.warrantyExpiry,
-          icon: ShieldAlert,
-          accentColor: Colors.success,
-          accentBg: Colors.successLight,
-        },
+      setMetrics((prev) => [
+        { ...prev[0], value: stats.pendingDisposals },
+        { ...prev[1], value: stats.softwareRenewals },
+        { ...prev[2], value: stats.overdueReturns },
+        { ...prev[3], value: stats.warrantyExpiry },
       ]);
     } catch (e) {
       console.error('Failed to load dashboard stats:', e);
