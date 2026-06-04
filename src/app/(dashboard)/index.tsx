@@ -11,7 +11,7 @@ import type { KPIMetric } from '../../types';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/auth-context';
-import { LogOut, ClipboardList, CalendarClock } from 'lucide-react-native';
+import { LogOut, Trash2, CalendarClock, AlertTriangle, ShieldAlert } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 
 /**
@@ -26,18 +26,32 @@ export default function DashboardScreen() {
   
   const [metrics, setMetrics] = useState<KPIMetric[]>([
     {
-      label: 'My Assigned Assets',
+      label: 'Pending Disposals',
       value: 0,
-      icon: ClipboardList,
+      icon: Trash2,
+      accentColor: Colors.warning,
+      accentBg: Colors.warningLight,
+    },
+    {
+      label: 'Software Renewals',
+      value: 0,
+      icon: CalendarClock,
       accentColor: Colors.info,
       accentBg: Colors.infoLight,
     },
     {
-      label: 'Expiring Licenses',
+      label: 'Overdue Returns',
       value: 0,
-      icon: CalendarClock,
-      accentColor: Colors.warning,
-      accentBg: Colors.warningLight,
+      icon: AlertTriangle,
+      accentColor: Colors.destructive,
+      accentBg: Colors.destructiveLight,
+    },
+    {
+      label: 'Warranty Expiry',
+      value: 0,
+      icon: ShieldAlert,
+      accentColor: Colors.success,
+      accentBg: Colors.successLight,
     },
   ]);
 
@@ -46,18 +60,32 @@ export default function DashboardScreen() {
       const stats = await fetchDashboardStats();
       setMetrics([
         {
-          label: 'My Assigned Assets',
-          value: stats.assignedAssets,
-          icon: ClipboardList,
+          label: 'Pending Disposals',
+          value: stats.pendingDisposals,
+          icon: Trash2,
+          accentColor: Colors.warning,
+          accentBg: Colors.warningLight,
+        },
+        {
+          label: 'Software Renewals',
+          value: stats.softwareRenewals,
+          icon: CalendarClock,
           accentColor: Colors.info,
           accentBg: Colors.infoLight,
         },
         {
-          label: 'Expiring Licenses',
-          value: stats.expiringLicenses,
-          icon: CalendarClock,
-          accentColor: Colors.warning,
-          accentBg: Colors.warningLight,
+          label: 'Overdue Returns',
+          value: stats.overdueReturns,
+          icon: AlertTriangle,
+          accentColor: Colors.destructive,
+          accentBg: Colors.destructiveLight,
+        },
+        {
+          label: 'Warranty Expiry',
+          value: stats.warrantyExpiry,
+          icon: ShieldAlert,
+          accentColor: Colors.success,
+          accentBg: Colors.successLight,
         },
       ]);
     } catch (e) {
@@ -118,16 +146,29 @@ export default function DashboardScreen() {
           entering={FadeInDown.delay(200).duration(500).springify()}
           className="mt-5"
         >
-          <View className="flex-row gap-3">
-            {metrics.map((metric, index) => (
-              <Animated.View
-                key={metric.label}
-                entering={FadeInDown.delay(200 + index * 50).duration(500).springify()}
-                style={{ flex: 1 }}
-              >
-                <KPICard metric={metric} />
-              </Animated.View>
-            ))}
+          <View className="gap-3">
+            <View className="flex-row gap-3">
+              {metrics.slice(0, 2).map((metric, index) => (
+                <Animated.View
+                  key={metric.label}
+                  entering={FadeInDown.delay(200 + index * 50).duration(500).springify()}
+                  style={{ flex: 1 }}
+                >
+                  <KPICard metric={metric} />
+                </Animated.View>
+              ))}
+            </View>
+            <View className="flex-row gap-3">
+              {metrics.slice(2, 4).map((metric, index) => (
+                <Animated.View
+                  key={metric.label}
+                  entering={FadeInDown.delay(300 + index * 50).duration(500).springify()}
+                  style={{ flex: 1 }}
+                >
+                  <KPICard metric={metric} />
+                </Animated.View>
+              ))}
+            </View>
           </View>
         </Animated.View>
 

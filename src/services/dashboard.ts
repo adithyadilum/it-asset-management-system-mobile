@@ -1,8 +1,10 @@
 import * as SecureStore from 'expo-secure-store';
 
 export interface DashboardStats {
-  assignedAssets: number;
-  expiringLicenses: number;
+  pendingDisposals: number;
+  softwareRenewals: number;
+  overdueReturns: number;
+  warrantyExpiry: number;
 }
 
 export interface DashboardStatsResponse {
