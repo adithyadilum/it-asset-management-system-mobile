@@ -151,48 +151,52 @@ export default function NotificationsScreen() {
       <Animated.View
         layout={Layout.springify()}
         entering={FadeInDown.delay(index * 20).duration(350)}
-        style={[
-          styles.card,
-          !item.isRead ? styles.cardUnread : styles.cardRead,
-        ]}
+        style={styles.cardWrapper}
       >
-        <Pressable
-          onPress={() => handleNotificationPress(item.id, item.isRead)}
-          style={styles.cardContent}
+        <View
+          style={[
+            styles.card,
+            !item.isRead ? styles.cardUnread : styles.cardRead,
+          ]}
         >
-          {/* Left status bar accent */}
-          {!item.isRead && <View style={styles.unreadIndicatorBar} />}
+          <Pressable
+            onPress={() => handleNotificationPress(item.id, item.isRead)}
+            style={styles.cardContent}
+          >
+            {/* Left status bar accent */}
+            {!item.isRead && <View style={styles.unreadIndicatorBar} />}
 
-          {/* Event Type Icon */}
-          <View style={[styles.iconContainer, { backgroundColor: config.bg }]}>
-            <IconComponent size={18} color={config.color} strokeWidth={2} />
-          </View>
+            {/* Event Type Icon */}
+            <View style={[styles.iconContainer, { backgroundColor: config.bg }]}>
+              <IconComponent size={18} color={config.color} strokeWidth={2} />
+            </View>
 
-          {/* Text block */}
-          <View style={styles.textContainer}>
-            <View style={styles.cardHeaderRow}>
+            {/* Text block */}
+            <View style={styles.textContainer}>
+              <View style={styles.cardHeaderRow}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    !item.isRead ? styles.textUnread : styles.textRead,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item.title}
+                </Text>
+                <Text style={styles.timeText}>{formatTimeAgo(item.createdAt)}</Text>
+              </View>
               <Text
                 style={[
-                  styles.cardTitle,
-                  !item.isRead ? styles.textUnread : styles.textRead,
+                  styles.cardMessage,
+                  !item.isRead ? styles.messageUnread : styles.messageRead,
                 ]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
-                {item.title}
+                {item.message}
               </Text>
-              <Text style={styles.timeText}>{formatTimeAgo(item.createdAt)}</Text>
             </View>
-            <Text
-              style={[
-                styles.cardMessage,
-                !item.isRead ? styles.messageUnread : styles.messageRead,
-              ]}
-              numberOfLines={2}
-            >
-              {item.message}
-            </Text>
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
       </Animated.View>
     );
   };
@@ -402,9 +406,11 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 32,
   },
+  cardWrapper: {
+    marginBottom: 12,
+  },
   card: {
     borderRadius: 16,
-    marginBottom: 12,
     borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#0f172a',

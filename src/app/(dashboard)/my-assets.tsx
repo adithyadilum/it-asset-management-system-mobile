@@ -199,24 +199,15 @@ export default function MyAssetsScreen() {
         </Animated.View>
       )}
 
-      {/* ── Empty State ── */}
-      {!loading && !error && hasNoAssets && (
-        <Animated.View entering={FadeIn.duration(400)} style={styles.centeredState}>
-          <View style={styles.emptyIconCircle}>
-            <Package size={36} color={Colors.info} strokeWidth={1.75} />
-          </View>
-          <Text style={styles.emptyTitle}>No Assets Assigned</Text>
-          <Text style={styles.stateText}>
-            You don't have any assets assigned to you at the moment.
-          </Text>
-        </Animated.View>
-      )}
-
-      {/* ── Data: Banner + List ── */}
-      {!loading && !error && !hasNoAssets && (
+      {/* ── Main Content Area ── */}
+      {!loading && !error && (
         <ScrollView
           style={styles.list}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={
+            hasNoAssets
+              ? [styles.listContent, { flexGrow: 1 }]
+              : styles.listContent
+          }
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -226,27 +217,41 @@ export default function MyAssetsScreen() {
             />
           }
         >
-          {/* Pending acknowledgment banner — driven by real API data */}
-          {pendingAssignments.length > 0 && (
-            <PendingAssignmentBanner
-              count={pendingAssignments.length}
-              onPress={openSheet}
-            />
+          {hasNoAssets ? (
+            <Animated.View entering={FadeIn.duration(400)} style={styles.centeredState}>
+              <View style={styles.emptyIconCircle}>
+                <Package size={36} color={Colors.info} strokeWidth={1.75} />
+              </View>
+              <Text style={styles.emptyTitle}>No Assets Assigned</Text>
+              <Text style={styles.stateText}>
+                You don't have any assets assigned to you at the moment.
+              </Text>
+            </Animated.View>
+          ) : (
+            <>
+              {/* Pending acknowledgment banner — driven by real API data */}
+              {pendingAssignments.length > 0 && (
+                <PendingAssignmentBanner
+                  count={pendingAssignments.length}
+                  onPress={openSheet}
+                />
+              )}
+
+              {/* Active asset cards */}
+              {activeAssets.map((asset, index) => (
+                <AnimatedAssetRow
+                  key={`${asset.id}-${asset.assignmentId}`}
+                  asset={asset}
+                  index={index}
+                  onPress={openDetails}
+                />
+              ))}
+
+              <Text style={styles.footerText}>
+                {totalCount} asset{totalCount !== 1 ? 's' : ''} assigned to you
+              </Text>
+            </>
           )}
-
-          {/* Active asset cards */}
-          {activeAssets.map((asset, index) => (
-            <AnimatedAssetRow
-              key={`${asset.id}-${asset.assignmentId}`}
-              asset={asset}
-              index={index}
-              onPress={openDetails}
-            />
-          ))}
-
-          <Text style={styles.footerText}>
-            {totalCount} asset{totalCount !== 1 ? 's' : ''} assigned to you
-          </Text>
         </ScrollView>
       )}
 

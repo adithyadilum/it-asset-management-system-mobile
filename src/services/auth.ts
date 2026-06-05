@@ -13,9 +13,23 @@ export interface ExchangeResponse {
  * Automatically bundles current device metadata.
  */
 export async function exchangeMobileToken(pairingToken: string): Promise<string> {
-  const deviceName = Device.modelName || 'Unknown Device';
-  const deviceOs = `${Device.osName} ${Device.osVersion}`;
-  const deviceModel = Device.designName || Device.modelName || 'Unknown Model';
+  const brand = Device.brand ? (Device.brand.charAt(0).toUpperCase() + Device.brand.slice(1)) : '';
+  const model = Device.modelName || 'Device';
+  
+  // Combine brand and model cleanly
+  let cleanDeviceName = model;
+  if (brand && !model.toLowerCase().includes(brand.toLowerCase())) {
+    cleanDeviceName = `${brand} ${model}`;
+  }
+
+  let deviceName = Device.deviceName;
+  // If no user-defined name, or if it's suspiciously long (often happens on Android), fallback to the clean name
+  if (!deviceName || deviceName.length > 35 || deviceName === 'Unknown' || deviceName.toLowerCase().includes('sdk')) {
+    deviceName = cleanDeviceName;
+  }
+
+  const deviceOs = `${Device.osName || 'Unknown OS'} ${Device.osVersion || ''}`.trim();
+  const deviceModel = Device.modelName || 'Unknown Model';
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   if (!API_URL) {
@@ -109,4 +123,28 @@ export async function fetchUserProfile(): Promise<UserProfile> {
     initials,
     avatarUrl: userData.avatarUrl,
   };
+}
+
+/**
+ * Tells the Next.js web backend to revoke this specific device
+ * and visually remove it from the Linked Devices table in real-time.
+ */
+export async function unlinkMe(): Promise<void> {
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
+  if (!API_URL) return;
+
+  const token = await SecureStore.getItemAsync('secure_admin_api_key');
+  if (!token) return;
+
+  try {
+    await fetch(`${API_URL}/api/v1/auth/unlink-me`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    console.error('Network error during unlinkMe:', error);
+  }
 }

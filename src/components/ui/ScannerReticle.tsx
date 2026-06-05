@@ -13,6 +13,8 @@ interface ScannerReticleProps {
   borderColor?: string;
   style?: StyleProp<ViewStyle>;
   reticleSize?: number;
+  width?: number;
+  height?: number;
   cornerSize?: number;
   cornerThickness?: number;
 }
@@ -25,6 +27,8 @@ export function ScannerReticle({
   borderColor = Colors.scannerCorner,
   style,
   reticleSize = 250,
+  width,
+  height,
   cornerSize = 40,
   cornerThickness = 4,
 }: ScannerReticleProps) {
@@ -47,8 +51,8 @@ export function ScannerReticle({
 
   const dynamicStyles = StyleSheet.create({
     container: {
-      width: reticleSize,
-      height: reticleSize,
+      width: width ?? reticleSize,
+      height: height ?? reticleSize,
       position: 'relative',
     },
     corner: {

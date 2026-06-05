@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SecureStore from 'expo-secure-store';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
     useFonts,
     NotoSans_400Regular,
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
-import Pusher from 'pusher-js/react-native';
+import { Pusher } from 'pusher-js/react-native';
 import { AuthContext } from '../context/auth-context';
 import { NotificationsProvider } from '../context/notifications-context';
 import { decodeJwt } from '../lib/jwt';
-import "../../global.css"; // Move your global CSS import here!
+import "../../global.css";
 
 // Prevent the splash screen from hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -105,9 +105,15 @@ export default function RootLayout() {
                     try {
                         await SecureStore.deleteItemAsync('secure_admin_api_key');
                         setIsAuthenticated(false);
+                        Alert.alert(
+                            'Access Revoked',
+                            'An administrator has revoked this device\'s access to the system. You have been signed out.'
+                        );
+                        router.replace('/(auth)/connect');
                     } catch (error) {
                         console.error('Error removing secure api key', error);
                         setIsAuthenticated(false);
+                        router.replace('/(auth)/connect');
                     }
                 });
             } catch (error) {

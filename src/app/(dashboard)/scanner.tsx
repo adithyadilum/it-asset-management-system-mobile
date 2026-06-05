@@ -36,12 +36,66 @@ export default function ScannerScreen() {
     }
   }, []);
 
-  const barcodeTypes = mode === 'qr'
-    ? ['qr'] as const
-    : ['code128', 'code39', 'upc_a', 'upc_e', 'ean13', 'ean8'] as const;
+  const barcodeTypes = [
+    'qr', 'code128', 'code39', 'upc_a', 'upc_e', 'ean13', 'ean8'
+  ] as const;
 
-  const handleBarCodeScanned = async ({ data, type }: { data: string; type: string }) => {
-    if (hasScanned) return;
+  const [layout, setLayout] = useState<{ width: number; height: number } | null>(null);
+
+  const handleBarCodeScanned = async (scanResult: any) => {
+    if (hasScanned || !layout) return;
+
+    const { data, type, bounds, cornerPoints, boundingBox } = scanResult;
+
+    if (mode === 'qr' && type !== 'qr') return;
+    if (mode === 'barcode' && type === 'qr') return;
+
+    const reticleWidth = mode === 'qr' ? 250 : 320;
+    const reticleHeight = mode === 'qr' ? 250 : 150;
+    const reticleX = (layout.width - reticleWidth) / 2;
+    const reticleY = (layout.height - reticleHeight) / 2;
+
+    // Find the center of the barcode
+    let barcodeCenterX;
+    let barcodeCenterY;
+
+    if (bounds && bounds.origin) {
+      barcodeCenterX = bounds.origin.x + (bounds.size?.width || 0) / 2;
+      barcodeCenterY = bounds.origin.y + (bounds.size?.height || 0) / 2;
+    } else if (bounds && typeof bounds.x === 'number') {
+      barcodeCenterX = bounds.x + (bounds.width || 0) / 2;
+      barcodeCenterY = bounds.y + (bounds.height || 0) / 2;
+    } else if (boundingBox) {
+      barcodeCenterX = boundingBox.x + boundingBox.width / 2;
+      barcodeCenterY = boundingBox.y + boundingBox.height / 2;
+    } else if (cornerPoints && cornerPoints.length > 0) {
+      let sumX = 0; let sumY = 0;
+      for (const p of cornerPoints) {
+        sumX += p.x || p[0] || 0;
+        sumY += p.y || p[1] || 0;
+      }
+      barcodeCenterX = sumX / cornerPoints.length;
+      barcodeCenterY = sumY / cornerPoints.length;
+    }
+
+    if (barcodeCenterX !== undefined && barcodeCenterY !== undefined) {
+      // Add a generous buffer (60px) to allow scanning if they are mostly inside
+      const buffer = 60;
+      const isInsideReticle = 
+        barcodeCenterX >= reticleX - buffer &&
+        barcodeCenterX <= reticleX + reticleWidth + buffer &&
+        barcodeCenterY >= reticleY - buffer &&
+        barcodeCenterY <= reticleY + reticleHeight + buffer;
+
+      if (!isInsideReticle) {
+        return; // Ignore scan entirely
+      }
+    } else {
+      // Strict mode: If we can't determine the location at all, we MUST ignore it, 
+      // otherwise it will scan everything on the screen simultaneously.
+      return;
+    }
+
     setHasScanned(true);
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -138,9 +192,16 @@ export default function ScannerScreen() {
   }
 
   return (
-    <View className="flex-1 bg-black">
+    <View 
+      className="flex-1 bg-black"
+      onLayout={(e) => {
+        setLayout({
+          width: e.nativeEvent.layout.width,
+          height: e.nativeEvent.layout.height
+        });
+      }}
+    >
       <CameraView
-        key={mode}
         style={StyleSheet.absoluteFillObject}
         facing="back"
         onBarcodeScanned={hasScanned ? undefined : handleBarCodeScanned}
@@ -149,8 +210,16 @@ export default function ScannerScreen() {
         }}
       />
 
+      {/* Center — Scanner reticle mathematically centered on the screen */}
+      <View style={[StyleSheet.absoluteFillObject, { alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
+        <ScannerReticle 
+          width={mode === 'qr' ? 250 : 320}
+          height={mode === 'qr' ? 250 : 150}
+        />
+      </View>
+
       {/* Semi-transparent overlay */}
-      <SafeAreaView className="flex-1 justify-between">
+      <SafeAreaView className="flex-1 justify-between" pointerEvents="box-none">
         {/* Top section — Mode selector + instructions */}
         <Animated.View entering={FadeIn.duration(400)} className="items-center mt-6 px-6">
           {/* Mode selector */}
@@ -203,11 +272,6 @@ export default function ScannerScreen() {
               : 'Point camera at an asset barcode'}
           </Text>
         </Animated.View>
-
-        {/* Center — Scanner reticle */}
-        <View className="flex-1 items-center justify-center">
-          <ScannerReticle />
-        </View>
 
         {/* Bottom — Cancel button */}
         <View className="items-center mb-8">

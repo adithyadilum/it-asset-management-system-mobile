@@ -12,6 +12,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/auth-context';
 import { LogOut, Trash2, CalendarClock, AlertTriangle, ShieldAlert } from 'lucide-react-native';
+import { unlinkMe } from '../../services/auth';
 import { Colors } from '../../constants/colors';
 
 /**
@@ -74,13 +75,27 @@ export default function DashboardScreen() {
   }, [loadStats]);
 
   const handleUnlink = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      await SecureStore.deleteItemAsync('secure_admin_api_key');
-      setIsAuthenticated(false);
-    } catch (e) {
-      console.error('Failed to unlink device', e);
-    }
+    Alert.alert(
+      'Unlink Device',
+      'Are you sure you want to unlink this device? You will need to scan a new QR code to access the system.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unlink',
+          style: 'destructive',
+          onPress: async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            try {
+              await unlinkMe();
+              await SecureStore.deleteItemAsync('secure_admin_api_key');
+              setIsAuthenticated(false);
+            } catch (e) {
+              console.error('Failed to unlink device', e);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const onRefresh = useCallback(() => {

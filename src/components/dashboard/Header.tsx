@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet, Modal, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../ui/Avatar';
-import { fetchUserProfile, type UserProfile } from '../../services/auth';
+import { fetchUserProfile, unlinkMe, type UserProfile } from '../../services/auth';
 import { Colors } from '../../constants/colors';
 import { useAuth } from '../../context/auth-context';
 import * as SecureStore from 'expo-secure-store';
@@ -44,6 +44,7 @@ export function Header() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setModalVisible(false);
     try {
+      await unlinkMe();
       await SecureStore.deleteItemAsync('secure_admin_api_key');
       setIsAuthenticated(false);
     } catch (e) {

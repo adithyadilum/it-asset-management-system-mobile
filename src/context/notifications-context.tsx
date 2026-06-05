@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import {
   fetchNotifications as apiFetchNotifications,
@@ -26,6 +26,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const prevUnreadCountRef = useRef(-1);
 
   const loadUnreadCount = useCallback(async () => {
     try {
@@ -106,6 +108,14 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     return () => clearInterval(interval);
   }, [loadUnreadCount]);
 
+  // Automatically fetch notifications if unread count increases
+  useEffect(() => {
+    if (unreadCount > prevUnreadCountRef.current && prevUnreadCountRef.current !== -1) {
+      loadNotifications(30, 0);
+    }
+    prevUnreadCountRef.current = unreadCount;
+  }, [unreadCount, loadNotifications]);
+
   return (
     <NotificationsContext.Provider
       value={{
@@ -131,3 +141,4 @@ export function useNotifications() {
   }
   return context;
 }
+
