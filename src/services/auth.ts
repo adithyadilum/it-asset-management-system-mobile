@@ -13,8 +13,23 @@ export interface ExchangeResponse {
  * Automatically bundles current device metadata.
  */
 export async function exchangeMobileToken(pairingToken: string): Promise<string> {
-  const brand = Device.brand ? (Device.brand.charAt(0).toUpperCase() + Device.brand.slice(1)) : '';
-  const model = Device.modelName || 'Device';
+  let brand = Device.brand ? (Device.brand.charAt(0).toUpperCase() + Device.brand.slice(1)) : '';
+  let model = Device.modelName || 'Device';
+
+  // If model name is unexpectedly a build fingerprint (contains slashes and colons), try to fallback
+  if (model.includes('/') && model.includes(':')) {
+    model = Device.designName || Device.productName || 'Android Device';
+    model = model.charAt(0).toUpperCase() + model.slice(1);
+  }
+
+  // Format Android emulators nicely instead of showing 'sdk_gphone...'
+  if (!Device.isDevice && Device.osName?.toLowerCase() === 'android') {
+    brand = 'Google';
+    model = 'Android Emulator';
+  } else if (model.toLowerCase().includes('sdk_gphone') || model.toLowerCase().includes('emulator')) {
+    brand = 'Google';
+    model = 'Android Emulator';
+  }
   
   // Combine brand and model cleanly
   let cleanDeviceName = model;
@@ -24,12 +39,17 @@ export async function exchangeMobileToken(pairingToken: string): Promise<string>
 
   let deviceName = Device.deviceName;
   // If no user-defined name, or if it's suspiciously long (often happens on Android), fallback to the clean name
-  if (!deviceName || deviceName.length > 35 || deviceName === 'Unknown' || deviceName.toLowerCase().includes('sdk')) {
+  if (!deviceName || deviceName.length > 30 || deviceName === 'Unknown' || deviceName.toLowerCase().includes('sdk')) {
     deviceName = cleanDeviceName;
   }
 
-  const deviceOs = `${Device.osName || 'Unknown OS'} ${Device.osVersion || ''}`.trim();
-  const deviceModel = Device.modelName || 'Unknown Model';
+  let osName = Device.osName || 'Unknown OS';
+  if (osName.includes('/')) {
+    osName = 'Android'; // Some devices return the build fingerprint in osName
+  }
+
+  const deviceOs = `${osName} ${Device.osVersion || ''}`.trim();
+  const deviceModel = model;
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   if (!API_URL) {
