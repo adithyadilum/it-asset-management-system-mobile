@@ -9,7 +9,7 @@ import {
     NotoSans_400Regular,
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
-import Pusher from 'pusher-js/react-native';
+
 import { AuthContext } from '../context/auth-context';
 import { NotificationsProvider } from '../context/notifications-context';
 import { decodeJwt } from '../lib/jwt';
@@ -63,7 +63,7 @@ export default function RootLayout() {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        let pusher: InstanceType<typeof Pusher> | null = null;
+        let pusher: any = null;
         let channelName = '';
 
         async function setupPusherListener() {
@@ -85,10 +85,10 @@ export default function RootLayout() {
                     return;
                 }
 
-                // Initialize Pusher — Metro resolves the CJS bundle correctly,
-                // but sometimes requires checking for a .default property depending on Babel/Metro configs.
-                const PusherClient = (Pusher as any).default || Pusher;
-                const client = new PusherClient(pusherKey, {
+                // Initialize Pusher using standard require to bypass Metro ES6 interop issues.
+                const PusherModule = require('pusher-js');
+                const PusherConstructor = PusherModule.default || PusherModule;
+                const client = new PusherConstructor(pusherKey, {
                     cluster: pusherCluster,
                     forceTLS: true,
                 });
