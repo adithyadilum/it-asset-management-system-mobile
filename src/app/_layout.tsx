@@ -86,8 +86,9 @@ export default function RootLayout() {
                 }
 
                 // Initialize Pusher — Metro resolves the CJS bundle correctly,
-                // so Pusher is directly the constructor (no .default interop needed).
-                const client = new Pusher(pusherKey, {
+                // but sometimes requires checking for a .default property depending on Babel/Metro configs.
+                const PusherClient = (Pusher as any).default || Pusher;
+                const client = new PusherClient(pusherKey, {
                     cluster: pusherCluster,
                     forceTLS: true,
                 });
