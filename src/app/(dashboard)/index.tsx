@@ -1,19 +1,12 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, ScrollView, RefreshControl } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Header } from '../../components/dashboard/Header';
 import { ScannerCard } from '../../components/dashboard/ScannerCard';
 import { KPICard } from '../../components/dashboard/KPICard';
 import { ActivityList } from '../../components/dashboard/ActivityList';
-import { Button } from '../../components/ui/Button';
-import { fetchDashboardStats } from '../../services/dashboard';
-import type { KPIMetric } from '../../types';
-import * as SecureStore from 'expo-secure-store';
-import * as Haptics from 'expo-haptics';
-import { useAuth } from '../../context/auth-context';
-import { LogOut, Trash2, CalendarClock, AlertTriangle, ShieldAlert } from 'lucide-react-native';
-import { unlinkMe } from '../../services/auth';
 import { Colors } from '../../constants/colors';
+import { useDashboardStats } from '../../hooks/useDashboardStats';
 
 /**
  * Main dashboard screen with header, scanner CTA, KPI cards, and live activity feed.
@@ -23,80 +16,12 @@ import { Colors } from '../../constants/colors';
 export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { setIsAuthenticated } = useAuth();
   
-  const [metrics, setMetrics] = useState<KPIMetric[]>([
-    {
-      label: 'Pending Disposals',
-      value: 0,
-      icon: Trash2,
-      accentColor: Colors.warning,
-      accentBg: Colors.warningLight,
-    },
-    {
-      label: 'Software Renewals',
-      value: 0,
-      icon: CalendarClock,
-      accentColor: Colors.info,
-      accentBg: Colors.infoLight,
-    },
-    {
-      label: 'Overdue Returns',
-      value: 0,
-      icon: AlertTriangle,
-      accentColor: Colors.destructive,
-      accentBg: Colors.destructiveLight,
-    },
-    {
-      label: 'Warranty Expiry',
-      value: 0,
-      icon: ShieldAlert,
-      accentColor: Colors.success,
-      accentBg: Colors.successLight,
-    },
-  ]);
-
-  const loadStats = useCallback(async () => {
-    try {
-      const stats = await fetchDashboardStats();
-      setMetrics((prev) => [
-        { ...prev[0], value: stats.pendingDisposals },
-        { ...prev[1], value: stats.softwareRenewals },
-        { ...prev[2], value: stats.overdueReturns },
-        { ...prev[3], value: stats.warrantyExpiry },
-      ]);
-    } catch (e) {
-      console.error('Failed to load dashboard stats:', e);
-    }
-  }, []);
+  const { metrics, loadStats } = useDashboardStats();
 
   React.useEffect(() => {
     loadStats();
   }, [loadStats]);
-
-  const handleUnlink = async () => {
-    Alert.alert(
-      'Unlink Device',
-      'Are you sure you want to unlink this device? You will need to scan a new QR code to access the system.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unlink',
-          style: 'destructive',
-          onPress: async () => {
-            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            try {
-              await unlinkMe();
-              await SecureStore.deleteItemAsync('secure_admin_api_key');
-              setIsAuthenticated(false);
-            } catch (e) {
-              console.error('Failed to unlink device', e);
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
