@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SecureStore from 'expo-secure-store';
-import { ActivityIndicator, View, Alert } from 'react-native';
+import { ActivityIndicator, View, Alert, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
     useFonts,
     NotoSans_400Regular,
     NotoSans_700Bold
 } from '@expo-google-fonts/noto-sans';
-import { Pusher } from 'pusher-js/react-native';
+
 import { AuthContext } from '../context/auth-context';
 import { NotificationsProvider } from '../context/notifications-context';
 import { decodeJwt } from '../lib/jwt';
@@ -63,7 +63,7 @@ export default function RootLayout() {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        let pusher: InstanceType<typeof Pusher> | null = null;
+        let pusher: any = null;
         let channelName = '';
 
         async function setupPusherListener() {
@@ -85,9 +85,24 @@ export default function RootLayout() {
                     return;
                 }
 
-                // Initialize Pusher — Metro resolves the CJS bundle correctly,
-                // so Pusher is directly the constructor (no .default interop needed).
-                const client = new Pusher(pusherKey, {
+                // Initialize Pusher using standard require to bypass Metro ES6 interop issues.
+                const PusherModule = require('pusher-js');
+                let PusherConstructor = PusherModule;
+                
+                if (PusherModule && typeof PusherModule.default === 'function') {
+                    PusherConstructor = PusherModule.default;
+                } else if (PusherModule && typeof PusherModule.default === 'object' && typeof PusherModule.default.Pusher === 'function') {
+                    PusherConstructor = PusherModule.default.Pusher;
+                } else if (PusherModule && typeof PusherModule.Pusher === 'function') {
+                    PusherConstructor = PusherModule.Pusher;
+                }
+
+                if (typeof PusherConstructor !== 'function') {
+                    console.error('Failed to resolve Pusher constructor. Module:', PusherModule);
+                    return;
+                }
+
+                const client = new PusherConstructor(pusherKey, {
                     cluster: pusherCluster,
                     forceTLS: true,
                 });
@@ -157,7 +172,12 @@ export default function RootLayout() {
 
     if (!isReady) {
         return (
-            <View className="flex-1 items-center justify-center bg-background">
+            <View className="flex-1 items-center justify-center bg-background gap-y-8">
+                <Image 
+                    source={require('../../assets/icon.png')} 
+                    style={{ width: 120, height: 120, borderRadius: 24 }}
+                    resizeMode="contain"
+                />
                 <ActivityIndicator size="large" />
             </View>
         );

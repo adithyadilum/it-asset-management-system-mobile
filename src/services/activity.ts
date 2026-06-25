@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { fetchApi } from '../constants/api';
 
 /** A single activity row returned by /api/v1/activity/recent */
 export interface ActivityLogEntry {
@@ -22,31 +22,6 @@ export interface RecentActivityResponse {
  * Uses the mobile JWT stored in SecureStore for authentication.
  */
 export async function fetchRecentActivity(): Promise<ActivityLogEntry[]> {
-  const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  if (!API_URL) {
-    throw new Error('API URL is not configured.');
-  }
-
-  const token = await SecureStore.getItemAsync('secure_admin_api_key');
-  if (!token) {
-    throw new Error('Not authenticated. Please re-pair your device.');
-  }
-
-  const response = await fetch(`${API_URL}/api/v1/activity/recent`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `Failed to fetch activity (status ${response.status})`
-    );
-  }
-
-  const result: RecentActivityResponse = await response.json();
+  const result = await fetchApi<RecentActivityResponse>('/api/v1/activity/recent');
   return result.data;
 }
