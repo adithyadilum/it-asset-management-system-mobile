@@ -1,26 +1,55 @@
+import * as SecureStore from 'expo-secure-store';
+
 /**
- * Centralized API configuration.
- * Even though we're using mock data now, this sets the structure
- * for future API integration.
+ * Centralized API configuration and fetching utility.
  */
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-export const ENDPOINTS = {
-  // Auth
-  mobileExchange: '/api/auth/mobile-exchange',
+interface FetchOptions extends RequestInit {
+  requiresAuth?: boolean;
+}
 
-  // Assets
-  assets: '/api/assets',
-  assetById: (id: string) => `/api/assets/${id}`,
-  assetByTag: (tag: string) => `/api/assets/tag/${tag}`,
-  myAssets: '/api/v1/assets/my-assets',
+export async function fetchApi<T = any>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+  if (!API_URL) {
+    throw new Error('API URL is not configured.');
+  }
 
-  // Dashboard
-  dashboard: '/api/dashboard',
-  metrics: '/api/dashboard/metrics',
-  activities: '/api/dashboard/activities',
+  const { requiresAuth = true, headers: customHeaders, ...restOptions } = options;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(customHeaders as Record<string, string>),
+  };
 
-  // Notifications
-  notifications: '/api/notifications',
-} as const;
+  if (requiresAuth) {
+    const token = await SecureStore.getItemAsync('secure_admin_api_key');
+    if (!token) {
+      throw new Error('Not authenticated. Please re-pair your device.');
+    }
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    headers,
+    ...restOptions,
+  });
+
+  if (!response.ok) {
+    let errorData: any = {};
+    try {
+      errorData = await response.json();
+    } catch {
+      // Ignored
+    }
+    throw new Error(
+      errorData.error || errorData.message || `API request failed (status ${response.status})`
+    );
+  }
+
+  // Handle empty responses
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  return response.json();
+}
