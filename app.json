@@ -13,9 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "bundleIdentifier": "com.tiqri.eitams.mobile",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.tiqri.eitams.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/icon.png",
@@ -31,7 +33,16 @@
       "expo-secure-store",
       "expo-router",
       "expo-font",
-      "expo-splash-screen"
-    ]
+      "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "EITAMS uses the camera to scan asset QR codes and hardware barcodes."
+        }
+      ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
