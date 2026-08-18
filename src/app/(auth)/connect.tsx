@@ -1,8 +1,10 @@
+import { toMessage } from '../../lib/errors';
+import { logger } from '../../lib/logger';
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Image, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as SecureStore from 'expo-secure-store';
+import { setStoredToken } from '../../constants/api';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { QrCode, Smartphone, Laptop, HelpCircle, X } from 'lucide-react-native';
@@ -12,7 +14,7 @@ import { Button } from '../../components/ui/Button';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
 import { exchangeMobileToken } from '../../services/auth';
-import { decodeJwt } from '../../lib/jwt';
+import { isStoredTokenUsable } from '../../lib/jwt';
 
 const SCANNER_SIZE = 260;
 
@@ -32,11 +34,11 @@ export default function ConnectScreen() {
     try {
       const token = await exchangeMobileToken(data);
 
-      // Defence-in-depth: verify the role embedded in the JWT before storing it.
-      // The backend already rejects non-admin users with a 403, but this check
-      // provides a clear, user-facing error if the token somehow has the wrong role.
-      const payload = decodeJwt(token);
-      if (payload?.role !== 'GlobalAdmin') {
+      // Defence-in-depth: check the role and expiry embedded in the JWT before
+      // storing it. The backend already rejects non-admin users with a 403, but
+      // this gives a clear, user-facing error if the token is wrong or already
+      // stale, rather than storing something every later request will reject.
+      if (!isStoredTokenUsable(token)) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           'Access Denied',
@@ -46,15 +48,15 @@ export default function ConnectScreen() {
         return;
       }
 
-      await SecureStore.setItemAsync('secure_admin_api_key', token);
+      await setStoredToken(token);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsAuthenticated(true);
-    } catch (error: any) {
-      console.error('Scan Error:', error);
+    } catch (error) {
+      logger.error('Scan Error:', error);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Pairing Failed',
-        error.message || 'The QR code was invalid or expired. Please try again.',
+        toMessage(error, 'The QR code was invalid or expired. Please try again.'),
         [{
           text: 'OK',
           onPress: () => {

@@ -2,6 +2,8 @@
  * Minimal Base64url → Base64 decoder polyfill for environments
  * (React Native / Hermes) that may not have a global `atob`.
  */
+
+import { logger } from './logger';
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
 function atobPolyfill(input: string): string {
@@ -57,7 +59,40 @@ export function decodeJwt(token: string): JwtPayload | null {
 
     return JSON.parse(decoded) as JwtPayload;
   } catch (e) {
-    console.error('[decodeJwt] Failed to decode JWT payload:', e);
+    logger.error('[decodeJwt] Failed to decode JWT payload:', e);
     return null;
   }
+}
+
+/** Roles permitted to hold a mobile session. */
+const ALLOWED_MOBILE_ROLES = ['GlobalAdmin'] as const;
+
+/**
+ * Clock skew allowance. A token within this window of expiring is treated as
+ * already expired, so the app does not open a screen it cannot finish loading.
+ */
+const EXPIRY_SKEW_MS = 60_000;
+
+/**
+ * Whether a decoded token can still be used for this session.
+ *
+ * The mobile JWT is signed with a 30-day lifetime and cannot be refreshed. The
+ * guard previously checked only the role, so on day 31 the app still believed
+ * it was authenticated: it rendered the dashboard, then every request failed
+ * with 401 and there was no route back to pairing.
+ */
+export function isTokenUsable(payload: JwtPayload | null): boolean {
+  if (!payload) return false;
+
+  const role = payload.role as (typeof ALLOWED_MOBILE_ROLES)[number] | undefined;
+  if (!role || !ALLOWED_MOBILE_ROLES.includes(role)) return false;
+
+  if (typeof payload.exp !== 'number') return false;
+  return payload.exp * 1000 > Date.now() + EXPIRY_SKEW_MS;
+}
+
+/** Convenience wrapper: decode a raw token and test it in one step. */
+export function isStoredTokenUsable(token: string | null): boolean {
+  if (!token) return false;
+  return isTokenUsable(decodeJwt(token));
 }
