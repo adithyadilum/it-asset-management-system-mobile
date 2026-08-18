@@ -1,6 +1,10 @@
 # EITAMS Mobile Companion App
 
-The official React Native mobile companion for the EITAMS (Enterprise IT Asset Management System) platform. Built using Expo, this application acts as a high-speed utility for IT Operators and Admins to manage and audit physical hardware in the field.
+The official React Native mobile companion for the EITAMS (Enterprise IT Asset Management System) platform. Built using Expo, this application acts as a high-speed utility for Global Administrators to manage and audit physical hardware in the field.
+
+> **Access:** device pairing is restricted to the **GlobalAdmin** role. `canAccessMobile` on the
+> backend also permits ITOperator and FinancialAuditor, but the pairing endpoints do not — see F-4 in
+> [`docs/MOBILE_AUDIT_2026-08-18.md`](docs/MOBILE_AUDIT_2026-08-18.md).
 
 ---
 
@@ -8,7 +12,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 
 * **Tethered Data Entry (Barcode Injection)**: Scan manufacturer 1D barcodes (Code 128, Code 39, UPC, EAN) using the camera to instantly inject values into the active input field on your EITAMS desktop screen via Pusher WebSockets.
 * **Remote Control & Sync**: Scanning a TIQRI asset QR code automatically slides open the Asset Details Panel on your active desktop monitor.
-* **Standalone Lookup**: Scan QR codes on-the-go to load live asset metadata (Model, Custodian, Location, and Warranty details) in a native bottom-sheet overlay.
+* **Standalone Lookup**: Scan QR codes on-the-go to load live asset metadata (Asset Tag, Status, Model, Location, and current Custodian) in a native bottom-sheet overlay.
 * **Identity Handshake**: Link the mobile client securely to EITAMS desktop sessions using encrypted JWT keys with `expo-secure-store` and `expo-camera` for scan handshake.
 
 ---
@@ -28,18 +32,21 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 ## Project Structure
 
 ```text
-├── app/                  # Expo Router screens (UI Navigation)
-│   ├── _layout.tsx       # Root layout & Font loading
-│   └── index.tsx         # Entry screen / Scan auth handshake
-├── src/                  # Application core
-│   ├── components/       # Reusable UI (Buttons, BottomSheets, Camera Reticles)
-│   ├── hooks/            # Custom React Hooks (useAuth, useScanner)
-│   ├── services/         # External API fetch calls & Pusher connection configs
-│   ├── types/            # Strict TypeScript Interfaces
-│   ├── utils/            # Haptics, formatting, and helper utilities
-│   └── constants/        # Static app-wide configurations & Theme colors
-├── global.css            # NativeWind tailwind configurations & variables
-└── tailwind.config.js    # Tailwind configuration
+├── src/
+│   ├── app/                # Expo Router screens (file-based navigation)
+│   │   ├── _layout.tsx     # Root layout: fonts, auth guard, revocation listener
+│   │   ├── (auth)/         # Pairing handshake
+│   │   └── (dashboard)/    # Dashboard, my-assets, scanner, notifications
+│   ├── components/         # Reusable UI (cards, sheets, camera reticle)
+│   ├── constants/          # API client, theme colors
+│   ├── context/            # Auth and notifications providers
+│   ├── hooks/              # useDashboardStats, useRecentActivity
+│   ├── lib/                # JWT decoding, logger, error narrowing
+│   ├── services/           # Typed API calls, one per backend area
+│   └── types/              # Shared TypeScript interfaces
+├── docs/                   # Audit report and engineering notes
+├── global.css              # NativeWind theme variables
+└── tailwind.config.js      # Tailwind configuration
 ```
 
 ---
@@ -79,6 +86,26 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
    - Press **`s`** to switch to development build.
    - Press **`w`** to test basic UI layouts in a web browser.
    - **Scan the QR code** printed in your terminal using your phone's camera (iOS) or the Expo Go app (Android) to run the application natively.
+
+### 3. Quality Gates
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+npm test            # jest
+npm run check       # all three, as CI runs them
+```
+
+CI runs the same gates on every push and pull request to `main` and `dev`.
+
+### 4. Native Builds
+
+The app runs in Expo Go for day-to-day development. Standalone builds go through EAS:
+
+```bash
+npx eas build --profile development --platform android
+npx eas build --profile production --platform all
+```
 
 ---
 

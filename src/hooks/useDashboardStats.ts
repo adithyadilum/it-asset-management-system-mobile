@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useCallback } from 'react';
 import { fetchDashboardStats } from '../services/dashboard';
 import type { KPIMetric } from '../types';
@@ -48,7 +49,7 @@ export function useDashboardStats() {
         { ...prev[3], value: stats.warrantyExpiry },
       ]);
     } catch (e) {
-      console.error('Failed to load dashboard stats:', e);
+      logger.error('Failed to load dashboard stats:', e);
     }
   }, []);
 

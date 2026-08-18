@@ -1,3 +1,4 @@
+import { toMessage } from '../../lib/errors';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -25,7 +26,7 @@ import { AssetDetailsSheet } from '../../components/dashboard/assets/AssetDetail
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 
-const AnimatedAssetRow = React.memo(({ asset, index, onPress }: { asset: AssetEntry, index: number, onPress: (asset: AssetEntry) => void }) => {
+const AnimatedAssetRow = React.memo(function AnimatedAssetRow({ asset, index, onPress }: { asset: AssetEntry, index: number, onPress: (asset: AssetEntry) => void }) {
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(400).springify()}>
       <AssetRow asset={asset} onPress={() => onPress(asset)} />
@@ -79,8 +80,8 @@ export default function MyAssetsScreen() {
     try {
       setLoading(true);
       await loadData();
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to load assets.');
+    } catch (err) {
+      setError(toMessage(err, 'Failed to load assets.'));
     } finally {
       setLoading(false);
     }
@@ -90,8 +91,8 @@ export default function MyAssetsScreen() {
     try {
       setRefreshing(true);
       await loadData();
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to load assets.');
+    } catch (err) {
+      setError(toMessage(err, 'Failed to load assets.'));
     } finally {
       setRefreshing(false);
     }
@@ -185,7 +186,7 @@ export default function MyAssetsScreen() {
                 <AlertCircle size={28} color={Colors.destructive} strokeWidth={1.75} />
               </View>
             </View>
-            <Text style={styles.errorTitle}>Couldn't Load Assets</Text>
+            <Text style={styles.errorTitle}>Couldn&apos;t Load Assets</Text>
             <Text style={styles.errorMessage}>{error}</Text>
             <Button
               variant="outline"
@@ -224,7 +225,7 @@ export default function MyAssetsScreen() {
               </View>
               <Text style={styles.emptyTitle}>No Assets Assigned</Text>
               <Text style={styles.stateText}>
-                You don't have any assets assigned to you at the moment.
+                You don&apos;t have any assets assigned to you at the moment.
               </Text>
             </Animated.View>
           ) : (
