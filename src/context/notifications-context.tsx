@@ -1,5 +1,10 @@
+import { toMessage } from '../lib/errors';
+import { logger } from '../lib/logger';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { AppState } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+
+import { getStoredToken } from '../constants/api';
 import {
   fetchNotifications as apiFetchNotifications,
   fetchUnreadCount as apiFetchUnreadCount,
@@ -21,6 +26,12 @@ type NotificationsContextType = {
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
+/**
+ * Matches the web client's floor. Push notifications (roadmap F-2) would retire
+ * polling altogether; until then this is the interim interval.
+ */
+const POLL_INTERVAL_MS = 60_000;
+
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -31,13 +42,13 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   const loadUnreadCount = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync('secure_admin_api_key');
+      const token = await getStoredToken();
       if (!token) return;
-      
+
       const count = await apiFetchUnreadCount();
       setUnreadCount(count);
     } catch (err) {
-      console.warn('Failed to load unread count:', err);
+      logger.warn('Failed to load unread count:', err);
     }
   }, []);
 
@@ -45,12 +56,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     setIsLoading(true);
     setError(null);
     try {
-      const token = await SecureStore.getItemAsync('secure_admin_api_key');
+      const token = await getStoredToken();
       if (!token) {
         setIsLoading(false);
         return;
       }
-      
+
       const result = await apiFetchNotifications(limit, offset);
       if (offset === 0) {
         setNotifications(result.data);
@@ -59,9 +70,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       }
       // Sync unread count as well
       await loadUnreadCount();
-    } catch (err: any) {
-      setError(err.message || 'Failed to load notifications');
-      console.error(err);
+    } catch (err) {
+      setError(toMessage(err, 'Failed to load notifications'));
+      logger.error('Failed to load notifications:', err);
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +88,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     try {
       await apiMarkAsRead(id);
     } catch (err) {
-      console.error('Failed to mark notification as read on server:', err);
+      logger.error('Failed to mark notification as read on server:', err);
       // Re-sync with server if API call failed
       loadNotifications(10, 0);
     }
@@ -91,21 +102,55 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     try {
       await apiMarkAllAsRead();
     } catch (err) {
-      console.error('Failed to mark all notifications as read on server:', err);
+      logger.error('Failed to mark all notifications as read on server:', err);
       // Re-sync with server if API call failed
       loadNotifications(10, 0);
     }
   }, [loadNotifications]);
 
-  // Set up polling for the unread count
+  // Poll for the unread count, but only while the app is in the foreground and
+  // connected. The previous unconditional 30s interval kept the radio awake for
+  // as long as the app was resident — including in the background, where the
+  // result could not be seen (M-07).
   useEffect(() => {
-    loadUnreadCount();
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let isForeground = AppState.currentState === 'active';
+    let isConnected = true;
 
-    const interval = setInterval(() => {
-      loadUnreadCount();
-    }, 30000); // Poll every 30 seconds
+    const stop = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
 
-    return () => clearInterval(interval);
+    const sync = () => {
+      if (isForeground && isConnected) {
+        if (interval) return;
+        loadUnreadCount();
+        interval = setInterval(loadUnreadCount, POLL_INTERVAL_MS);
+      } else {
+        stop();
+      }
+    };
+
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      isForeground = state === 'active';
+      sync();
+    });
+
+    const netInfoUnsubscribe = NetInfo.addEventListener((state) => {
+      isConnected = state.isConnected !== false;
+      sync();
+    });
+
+    sync();
+
+    return () => {
+      stop();
+      appStateSubscription.remove();
+      netInfoUnsubscribe();
+    };
   }, [loadUnreadCount]);
 
   // Automatically fetch notifications if unread count increases
