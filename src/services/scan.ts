@@ -1,73 +1,32 @@
-import * as SecureStore from 'expo-secure-store';
-import { ScanResponse } from '../types/asset';
+import { fetchApi } from '../constants/api';
+import { AssetDetailsData, ScanResponse } from '../types/asset';
 
-// We should use the same base URL configured for the app
-export async function fetchScannedAssetDetails(assetTag: string): Promise<ScanResponse> {
-  try {
-    const API_URL = process.env.EXPO_PUBLIC_API_URL;
-    if (!API_URL) {
-      throw new Error('API URL is not configured.');
-    }
+/**
+ * Looks up an asset by its tag, as read from a QR code.
+ * Throws on failure — callers should catch rather than inspect a flag.
+ */
+export async function fetchScannedAssetDetails(
+  assetTag: string
+): Promise<AssetDetailsData> {
+  const result = await fetchApi<ScanResponse>('/api/v1/scan', {
+    method: 'POST',
+    body: { assetTag },
+  });
 
-    const token = await SecureStore.getItemAsync('secure_admin_api_key');
-    
-    if (!token) {
-      return { success: false, error: 'Unauthorized: No token found' };
-    }
-
-    const response = await fetch(`${API_URL}/api/v1/scan`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ assetTag }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: data.error || 'Failed to scan asset' };
-    }
-
-    return data;
-  } catch (error: any) {
-    console.error('API Error in fetchScannedAssetDetails:', error);
-    return { success: false, error: error.message || 'Network error occurred' };
+  if (!result.data) {
+    throw new Error('The server returned no details for this asset.');
   }
+
+  return result.data;
 }
 
-export async function injectBarcode(barcode: string): Promise<ScanResponse> {
-  try {
-    const API_URL = process.env.EXPO_PUBLIC_API_URL;
-    if (!API_URL) {
-      throw new Error('API URL is not configured.');
-    }
-
-    const token = await SecureStore.getItemAsync('secure_admin_api_key');
-    
-    if (!token) {
-      return { success: false, error: 'Unauthorized: No token found' };
-    }
-
-    const response = await fetch(`${API_URL}/api/v1/inject-barcode`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ barcode }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: data.error || 'Failed to inject barcode' };
-    }
-
-    return data;
-  } catch (error: any) {
-    console.error('API Error in injectBarcode:', error);
-    return { success: false, error: error.message || 'Network error occurred' };
-  }
+/**
+ * Pushes a scanned barcode to the paired desktop session over Pusher.
+ * Throws on failure.
+ */
+export async function injectBarcode(barcode: string): Promise<void> {
+  await fetchApi<unknown>('/api/v1/inject-barcode', {
+    method: 'POST',
+    body: { barcode },
+  });
 }

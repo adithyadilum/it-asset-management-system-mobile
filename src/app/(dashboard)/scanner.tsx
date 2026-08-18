@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -10,6 +10,8 @@ import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
 import { fetchScannedAssetDetails, injectBarcode } from '../../services/scan';
 import { reportAssetIssue } from '../../services/issues';
+import { toMessage } from '../../lib/errors';
+import { RateLimitError } from '../../constants/api';
 import { AssetDetailsData } from '../../types/asset';
 
 type ScanMode = 'qr' | 'barcode';
@@ -18,11 +20,41 @@ type ScanMode = 'qr' | 'barcode';
  * Shared scanner screen with mode selector (QR vs Barcode).
  * Features: pulsing corner reticle, haptic feedback, mode toggle.
  */
+/**
+ * The geometry expo-camera reports varies by platform and SDK version: iOS
+ * returns `bounds.origin`/`bounds.size`, Android has returned both a flat
+ * `bounds` box and a `boundingBox`, and some paths only supply `cornerPoints`
+ * — as objects or as `[x, y]` tuples. The published `BarcodeScanningResult`
+ * type describes only one of those shapes, so it cannot be used here without
+ * breaking the platforms it omits.
+ *
+ * This models the union the handler actually reads. Everything is optional
+ * because the handler already probes each shape in turn.
+ */
+type ScannedPoint = { x?: number; y?: number; 0?: number; 1?: number };
+
+type ScanGeometry = {
+  data: string;
+  type: string;
+  bounds?: {
+    origin?: { x: number; y: number };
+    size?: { width: number; height: number };
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  };
+  boundingBox?: { x: number; y: number; width: number; height: number };
+  cornerPoints?: ScannedPoint[];
+};
+
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [mode, setMode] = useState<ScanMode>('qr');
   const [hasScanned, setHasScanned] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  /** Seconds remaining on a server-imposed cooldown; 0 when scanning is live. */
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [scannedAsset, setScannedAsset] = useState<AssetDetailsData | null>(null);
   const [showReportForm, setShowReportForm] = useState(false);
   const [issueNote, setIssueNote] = useState('');
@@ -42,7 +74,7 @@ export default function ScannerScreen() {
 
   const [layout, setLayout] = useState<{ width: number; height: number } | null>(null);
 
-  const handleBarCodeScanned = async (scanResult: any) => {
+  const handleBarCodeScanned = async (scanResult: ScanGeometry) => {
     if (hasScanned || !layout) return;
 
     const { data, type, bounds, cornerPoints, boundingBox } = scanResult;
@@ -64,7 +96,7 @@ export default function ScannerScreen() {
       barcodeCenterY = bounds.origin.y + (bounds.size?.height || 0) / 2;
     } else if (bounds && typeof bounds.x === 'number') {
       barcodeCenterX = bounds.x + (bounds.width || 0) / 2;
-      barcodeCenterY = bounds.y + (bounds.height || 0) / 2;
+      barcodeCenterY = (bounds.y ?? 0) + (bounds.height || 0) / 2;
     } else if (boundingBox) {
       barcodeCenterX = boundingBox.x + boundingBox.width / 2;
       barcodeCenterY = boundingBox.y + boundingBox.height / 2;
@@ -109,42 +141,68 @@ export default function ScannerScreen() {
         return;
       }
       setIsLoading(true);
-      const result = await injectBarcode(data);
-      setIsLoading(false);
-
-      if (result.success) {
+      try {
+        await injectBarcode(data);
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Barcode injected successfully', [
           { text: 'OK', onPress: () => setHasScanned(false) }
         ]);
-      } else {
+      } catch (error) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Invalid barcode', result.error || 'Failed to inject barcode', [
-          { text: 'Try Again', onPress: () => setHasScanned(false) }
-        ]);
+        if (!startCooldownIfRateLimited(error)) {
+          Alert.alert('Invalid barcode', toMessage(error, 'Failed to inject barcode'), [
+            { text: 'Try Again', onPress: () => setHasScanned(false) }
+          ]);
+        }
+      } finally {
+        setIsLoading(false);
       }
       return;
     }
 
     setIsLoading(true);
 
-    const result = await fetchScannedAssetDetails(data);
-    setIsLoading(false);
-
-    if (result.success && result.data) {
+    try {
+      const asset = await fetchScannedAssetDetails(data);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setScannedAsset(result.data);
-    } else {
+      setScannedAsset(asset);
+    } catch (error) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Scan Failed',
-        result.error || 'Could not find asset details.',
-        [
-          { text: 'Try Again', onPress: () => setHasScanned(false) },
-          { text: 'Cancel', onPress: () => router.back(), style: 'cancel' }
-        ]
-      );
+      if (!startCooldownIfRateLimited(error)) {
+        Alert.alert(
+          'Scan Failed',
+          toMessage(error, 'Could not find asset details.'),
+          [
+            { text: 'Try Again', onPress: () => setHasScanned(false) },
+            { text: 'Cancel', onPress: () => router.back(), style: 'cancel' }
+          ]
+        );
+      }
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // A 429 pauses the viewfinder and lets it resume on its own. Stacking modal
+  // alerts on every rejected scan — the previous behaviour — made a rate-limited
+  // burst unusable (M-06).
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setTimeout(() => {
+      setCooldownSeconds((seconds) => {
+        const next = seconds - 1;
+        if (next <= 0) setHasScanned(false);
+        return next;
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [cooldownSeconds]);
+
+  /** Returns true when the error was a rate limit and a cooldown was started. */
+  const startCooldownIfRateLimited = (error: unknown): boolean => {
+    if (!(error instanceof RateLimitError)) return false;
+    setCooldownSeconds(error.retryAfterSeconds);
+    return true;
   };
 
   const closeBottomSheet = () => {
@@ -161,17 +219,16 @@ export default function ScannerScreen() {
     setIsSubmittingIssue(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const result = await reportAssetIssue(scannedAsset.asset.id, issueNote);
-
-    setIsSubmittingIssue(false);
-
-    if (result.success) {
+    try {
+      await reportAssetIssue(scannedAsset.asset.id, issueNote);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Issue reported successfully.');
       closeBottomSheet();
-    } else {
+    } catch (error) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', result.error || 'Failed to report issue.');
+      Alert.alert('Error', toMessage(error, 'Failed to report issue.'));
+    } finally {
+      setIsSubmittingIssue(false);
     }
   };
 
@@ -267,10 +324,18 @@ export default function ScannerScreen() {
           </View>
 
           <Text style={styles.instruction}>
-            {mode === 'qr'
-              ? 'Point camera at a QR code'
-              : 'Point camera at an asset barcode'}
+            {cooldownSeconds > 0
+              ? `Scanning paused — resuming in ${cooldownSeconds}s`
+              : mode === 'qr'
+                ? 'Point camera at a QR code'
+                : 'Point camera at an asset barcode'}
           </Text>
+
+          {cooldownSeconds > 0 && (
+            <Text style={styles.cooldownNote}>
+              The server is limiting how fast scans can be sent.
+            </Text>
+          )}
         </Animated.View>
 
         {/* Bottom — Cancel button */}
@@ -472,6 +537,13 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 16,
     textAlign: 'center',
+  },
+  cooldownNote: {
+    marginTop: 6,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.72)',
+    textAlign: 'center',
+    fontFamily: 'NotoSans_400Regular',
   },
   cancelButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
