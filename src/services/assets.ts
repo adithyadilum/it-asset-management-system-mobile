@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { fetchApi } from '../constants/api';
 
 /** A single asset row returned by /api/v1/assets/my-assets */
 export interface AssetEntry {
@@ -40,77 +40,29 @@ export async function fetchMyAssets(): Promise<{
   activeAssets: AssetEntry[];
   pendingAssignments: PendingAssignment[];
 }> {
-  const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  if (!API_URL) {
-    throw new Error('API URL is not configured.');
-  }
-
-  const token = await SecureStore.getItemAsync('secure_admin_api_key');
-  if (!token) {
-    throw new Error('Not authenticated. Please re-pair your device.');
-  }
-
-  const response = await fetch(`${API_URL}/api/v1/assets/my-assets`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `Failed to fetch assets (status ${response.status})`
-    );
-  }
-
-  const result: AssetListResponse = await response.json();
+  const result = await fetchApi<AssetListResponse>('/api/v1/assets/my-assets');
 
   const pendingAssignments = result.data.filter(
     (a): a is PendingAssignment => a.state === 'pending approval'
   );
-  const activeAssets = result.data.filter(
-    (a) => a.state !== 'pending approval'
-  );
+  const activeAssets = result.data.filter((a) => a.state !== 'pending approval');
 
   return { activeAssets, pendingAssignments };
 }
 
 /**
  * Acknowledges a pending asset assignment.
- * Calls PATCH /api/v1/assets/assignments/:id/acknowledge.
+ * Calls POST /api/v1/assets/assignments/:id/acknowledge.
  * On success the server sets state = 'assigned' and acceptedAt = now().
+ *
+ * The verb must be POST: the route is only exported as POST server-side, and it
+ * is not idempotent — a second attempt is rejected with 409.
  */
 export async function acknowledgeAssignment(
   assignmentId: number
 ): Promise<void> {
-  const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  if (!API_URL) {
-    throw new Error('API URL is not configured.');
-  }
-
-  const token = await SecureStore.getItemAsync('secure_admin_api_key');
-  if (!token) {
-    throw new Error('Not authenticated. Please re-pair your device.');
-  }
-
-  const response = await fetch(
-    `${API_URL}/api/v1/assets/assignments/${assignmentId}/acknowledge`,
-    {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }
+  await fetchApi<unknown>(
+    `/api/v1/assets/assignments/${assignmentId}/acknowledge`,
+    { method: 'POST' }
   );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error ||
-        `Failed to acknowledge assignment (status ${response.status})`
-    );
-  }
 }
