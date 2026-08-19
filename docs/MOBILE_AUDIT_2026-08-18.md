@@ -698,7 +698,7 @@ number, following the sequence this report proposed. No roadmap item (F-1 … F-
 | M-05 | **Fixed** (both repos) | Channels moved to `private-user-<id>` and `private-device-<jti>`, authorized by a new backend route `POST /api/v1/pusher/auth`. Device authorization is a `linked_devices` lookup rather than a token-claim comparison, so it works for web sessions and mobile tokens alike, and a revoked device loses its subscription immediately. |
 | M-06 | **Fixed** | The client raises `RateLimitError` carrying `retryAfterSeconds` derived from `X-RateLimit-Reset` (clamped to 60s against clock skew). The scanner pauses the viewfinder for that long and shows an inline countdown instead of stacking modal alerts. |
 | M-07 | **Fixed** | Notification polling widened to 60s and is now started and stopped by `AppState` and `NetInfo` listeners, so it runs only while the app is foregrounded and connected. |
-| M-08 | **Fixed** | All seven services now go through `fetchApi`. It owns the token, JSON serialization, a 15s timeout, and distinguishes a network failure from a server rejection. `scan` and `issues` no longer return success-shaped objects — every service reports failure by throwing. |
+| M-08 | **Fixed** (see regression note below) | All seven services now go through `fetchApi`. It owns the token, JSON serialization, a 15s timeout, and distinguishes a network failure from a server rejection. `scan` and `issues` no longer return success-shaped objects — every service reports failure by throwing. |
 | M-09 | **Fixed** | A 401 clears the stored token and invokes a registered handler that returns the app to pairing. `AuthContext` gained a real `signOut`, which the header's unlink flow now uses. |
 | M-10 | **Fixed** | Added `typecheck`, `lint`, `test`, and `check` scripts; ESLint (flat config, `eslint-config-expo`) with `no-console`; Jest via `jest-expo`; and a CI workflow running all of it plus `npm audit`. 31 tests across three suites. |
 | M-11 | **Not a defect — corrected** | See below. |
@@ -755,6 +755,44 @@ Still not performed: no device or simulator run, no EAS build, and no end-to-end
 a live backend. The M-05 channel migration in particular changes runtime behaviour on both sides and
 should be exercised against a real Pusher app before release — a subscription that fails
 authorization is silent from the user's perspective.
+
+## Regression found after remediation: AbortSignal.timeout
+
+The M-08 client used `AbortSignal.timeout(15_000)` to bound requests. That static
+does not exist in React Native: RN polyfills `AbortSignal` with the
+`abort-controller` package, which provides the constructor and none of the
+statics.
+
+```js
+require('abort-controller/dist/abort-controller').AbortSignal.timeout
+// undefined
+```
+
+So the call threw `TypeError` *before* `fetch` was reached — on every request,
+including device pairing. Two things then combined to disguise it:
+
+1. The call sat inside the `try` that wrapped `fetch`.
+2. That `catch` rewrote every failure as
+   `Could not reach the server. Check your connection and try again.`
+
+The result was a network-shaped error message for a runtime-API fault, which
+sent debugging toward IP addresses, firewalls, and CORS. The backend was
+verified reachable on both loopback and the LAN address throughout, answering
+`401 {"error":"QR Code expired or invalid"}` to a bogus pairing token.
+
+**Fixed** by building the timeout from `AbortController` plus `setTimeout`,
+supported everywhere this app runs, and by narrowing the `catch`: only
+recognised transport failures are rewritten, and anything else is rethrown
+untouched. Three regression tests cover it, including one that deletes
+`AbortSignal.timeout` to simulate the React Native runtime — a Jest/Node
+environment has the static, so without that deletion no test could have caught
+this.
+
+**The wider lesson** is the one the verification section already flagged: no
+device or simulator run was performed, and every gate that did run — typecheck,
+lint, 31 tests — passed against a Node environment that supports APIs the target
+runtime does not. Any future change to the HTTP client needs at least one run on
+a device before it is called done.
 
 ## Remaining lint warnings
 

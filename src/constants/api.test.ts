@@ -174,18 +174,68 @@ describe('fetchApi', () => {
   });
 
   it('reports a network failure distinctly from a server rejection', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed'));
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new TypeError('Network request failed'));
 
     await expect(fetchApi('/api/v1/thing')).rejects.toThrow(
       'Could not reach the server'
     );
   });
 
-  it('reports a timeout distinctly', async () => {
-    const timeout = new Error('timed out');
-    timeout.name = 'TimeoutError';
-    global.fetch = jest.fn().mockRejectedValue(timeout);
+  it('rethrows a programming error instead of calling it a network failure', async () => {
+    // The whole point: an unsupported runtime API used to be swallowed and
+    // reported as "check your connection", which hid it in every environment.
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new TypeError('x.y is not a function'));
 
-    await expect(fetchApi('/api/v1/thing')).rejects.toThrow('took too long');
+    await expect(fetchApi('/api/v1/thing')).rejects.toThrow(
+      'x.y is not a function'
+    );
+  });
+
+  it('does not depend on AbortSignal.timeout', async () => {
+    // React Native polyfills AbortSignal with the `abort-controller` package,
+    // which provides the constructor and none of the statics. Calling
+    // AbortSignal.timeout there throws before fetch is reached, which broke
+    // every request including device pairing.
+    const original = AbortSignal.timeout;
+    // @ts-expect-error deliberately simulating the React Native runtime
+    delete AbortSignal.timeout;
+
+    try {
+      global.fetch = jest.fn().mockResolvedValue(jsonResponse({ ok: true }));
+
+      await expect(fetchApi('/api/v1/thing')).resolves.toEqual({ ok: true });
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+      expect(init.signal).toBeDefined();
+      expect(init.signal.aborted).toBe(false);
+    } finally {
+      AbortSignal.timeout = original;
+    }
+  });
+
+  it('aborts and reports a timeout when the server never answers', async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn(
+      (_url: unknown, init: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(new TypeError('Aborted'))
+          );
+        })
+    ) as unknown as typeof fetch;
+
+    const pending = fetchApi('/api/v1/thing');
+    const assertion = expect(pending).rejects.toThrow('took too long');
+
+    // Async variant flushes microtasks between ticks, so the awaited keychain
+    // read completes and the timer exists before the clock moves.
+    await jest.advanceTimersByTimeAsync(16_000);
+    await assertion;
+
+    jest.useRealTimers();
   });
 });

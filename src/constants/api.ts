@@ -15,6 +15,37 @@ export const TOKEN_KEY = 'secure_admin_api_key';
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
+/**
+ * Builds an abort signal that fires after `ms`.
+ *
+ * Deliberately not `AbortSignal.timeout()`. React Native polyfills `AbortSignal`
+ * with the `abort-controller` package, which implements the constructor but
+ * none of the statics — `AbortSignal.timeout` is `undefined` there, so calling
+ * it throws `TypeError` before `fetch` is ever reached. `AbortController` plus
+ * `setTimeout` is supported everywhere this app runs.
+ */
+const TRANSPORT_FAILURE_PATTERN =
+  /network request failed|failed to fetch|network error|connection (refused|reset)|load failed/i;
+
+/** Whether a thrown value is fetch reporting that it could not connect. */
+function isTransportFailure(cause: unknown): boolean {
+  return (
+    cause instanceof TypeError && TRANSPORT_FAILURE_PATTERN.test(cause.message)
+  );
+}
+
+function createTimeoutSignal(ms: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    cancel: () => clearTimeout(timer),
+    get timedOut() {
+      return controller.signal.aborted;
+    },
+  };
+}
+
 /** Any non-2xx response from the API. */
 export class ApiError extends Error {
   constructor(
@@ -51,6 +82,17 @@ export class RateLimitError extends ApiError {
       429
     );
     this.name = 'RateLimitError';
+  }
+}
+
+/**
+ * Raised when the request never reached the server, or the reply never arrived.
+ * Distinct from `ApiError`, which means the server answered and said no.
+ */
+export class NetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NetworkError';
   }
 }
 
@@ -178,23 +220,41 @@ export async function fetchApi<T>(
     headers.Authorization = `Bearer ${token}`;
   }
 
+  // Resolved outside the try: a misconfigured base URL is a configuration fault
+  // and must surface as itself, not be relabelled as a connection failure.
+  const url = `${getApiUrl()}${endpoint}`;
+  const timeout = createTimeoutSignal(REQUEST_TIMEOUT_MS);
+
   let response: Response;
   try {
-    response = await fetch(`${getApiUrl()}${endpoint}`, {
+    response = await fetch(url, {
       ...restOptions,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: timeout.signal,
     });
   } catch (cause) {
-    // Distinguish "the network failed" from "the server said no", which the
-    // previous per-service implementations collapsed into one message.
-    const isTimeout = cause instanceof Error && cause.name === 'TimeoutError';
-    throw new Error(
-      isTimeout
-        ? 'The server took too long to respond. Check your connection and try again.'
-        : 'Could not reach the server. Check your connection and try again.'
-    );
+    if (timeout.timedOut) {
+      throw new NetworkError(
+        'The server took too long to respond. Check your connection and try again.'
+      );
+    }
+
+    // A transport failure and a programming error both arrive here as
+    // `TypeError` — React Native rejects with `TypeError: Network request
+    // failed` when it cannot connect. Only the recognised transport messages
+    // are rewritten; anything else is a bug and is rethrown untouched, because
+    // relabelling it "check your connection" is what makes such faults hard to
+    // diagnose. An unsupported runtime API reached production this way.
+    if (isTransportFailure(cause)) {
+      throw new NetworkError(
+        'Could not reach the server. Check your connection and try again.'
+      );
+    }
+
+    throw cause;
+  } finally {
+    timeout.cancel();
   }
 
   if (response.status === 401) {
