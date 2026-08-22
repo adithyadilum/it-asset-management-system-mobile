@@ -17,4 +17,10 @@ module.exports = defineConfig([
     files: ['**/*.test.ts', '**/*.test.tsx'],
     rules: { 'no-console': 'off' },
   },
+  {
+    // Command-line scripts report to stdout; that is their entire output. The
+    // audit-baseline gate printing its comparison table is not stray logging.
+    files: ['scripts/**/*'],
+    rules: { 'no-console': 'off' },
+  },
 ]);
