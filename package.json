@@ -51,7 +51,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "jest",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "preflight": "node scripts/preflight.mjs"
   },
   "private": true,
   "jest": {
