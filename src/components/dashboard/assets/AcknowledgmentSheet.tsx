@@ -1,3 +1,4 @@
+import { toMessage } from '../../../lib/errors';
 import React, { useRef, useEffect, useState } from 'react';
 import {
   Modal,
@@ -106,8 +107,8 @@ export function AcknowledgmentSheet({
     try {
       await onConfirm(assignment.assignmentId);
       onClose();
-    } catch (err: any) {
-      setConfirmError(err.message ?? 'Failed to confirm. Please try again.');
+    } catch (err) {
+      setConfirmError(toMessage(err, 'Failed to confirm. Please try again.'));
     } finally {
       setConfirming(false);
     }

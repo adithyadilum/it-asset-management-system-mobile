@@ -1,3 +1,4 @@
+import { toMessage } from '../lib/errors';
 import { useState, useCallback } from 'react';
 import { fetchRecentActivity, type ActivityLogEntry } from '../services/activity';
 
@@ -12,8 +13,8 @@ export function useRecentActivity() {
       setLoading(true);
       const data = await fetchRecentActivity();
       setEntries(data);
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to load activity.');
+    } catch (err) {
+      setError(toMessage(err, 'Failed to load activity.'));
     } finally {
       setLoading(false);
     }

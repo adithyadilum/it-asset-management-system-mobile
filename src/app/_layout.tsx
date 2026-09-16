@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { logger } from '../lib/logger';
+import { useCallback, useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import * as SecureStore from 'expo-secure-store';
-import { ActivityIndicator, View, Alert, Image } from 'react-native';
+import { ActivityIndicator, View, Alert, Image, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
     useFonts,
@@ -12,7 +12,13 @@ import {
 
 import { AuthContext } from '../context/auth-context';
 import { NotificationsProvider } from '../context/notifications-context';
-import { decodeJwt } from '../lib/jwt';
+import { decodeJwt, isStoredTokenUsable } from '../lib/jwt';
+import {
+    clearStoredToken,
+    getApiUrl,
+    getStoredToken,
+    setUnauthenticatedHandler,
+} from '../constants/api';
 import "../../global.css";
 
 // Prevent the splash screen from hiding until fonts are loaded
@@ -30,50 +36,76 @@ export default function RootLayout() {
     const segments = useSegments();
     const router = useRouter();
 
-    useEffect(() => {
-        async function checkAuth() {
-            try {
-                const key = await SecureStore.getItemAsync('secure_admin_api_key');
-                if (key) {
-                    // Runtime role guard: validate the stored JWT contains a GlobalAdmin role.
-                    // This evicts any stale or non-admin token that may have been stored
-                    // before this RBAC enforcement was in place.
-                    const payload = decodeJwt(key);
-                    if (payload?.role !== 'GlobalAdmin') {
-                        console.warn('[Auth] Stored token has non-admin role. Evicting.');
-                        await SecureStore.deleteItemAsync('secure_admin_api_key');
-                        setIsAuthenticated(false);
-                    } else {
-                        setIsAuthenticated(true);
-                    }
-                } else {
-                    setIsAuthenticated(false);
-                }
-            } catch (e) {
-                console.error('Error reading from SecureStore', e);
+    // Validates the stored token's role *and* expiry, evicting anything stale.
+    const checkAuth = useCallback(async () => {
+        try {
+            const key = await getStoredToken();
+            if (isStoredTokenUsable(key)) {
+                setIsAuthenticated(true);
+            } else {
+                if (key) await clearStoredToken();
                 setIsAuthenticated(false);
-            } finally {
-                setAuthLoading(false);
             }
+        } catch (e) {
+            logger.error('Error reading from SecureStore', e);
+            setIsAuthenticated(false);
+        } finally {
+            setAuthLoading(false);
         }
+    }, []);
+
+    useEffect(() => {
         checkAuth();
+    }, [checkAuth]);
+
+    // A token can expire while the app sits in the background, so the guard is
+    // re-run on every return to the foreground rather than only at mount.
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') checkAuth();
+        });
+        return () => subscription.remove();
+    }, [checkAuth]);
+
+    const signOut = useCallback(async () => {
+        await clearStoredToken();
+        setIsAuthenticated(false);
+    }, []);
+
+    // The API client cannot import React context, so it is handed the callback
+    // it should invoke when the server rejects our token (M-09).
+    useEffect(() => {
+        setUnauthenticatedHandler(() => {
+            setIsAuthenticated(false);
+        });
+        return () => setUnauthenticatedHandler(null);
     }, []);
 
     // Listen for real-time device link revocation
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        let pusher: any = null;
+        // Structural type: the Pusher constructor is resolved dynamically
+        // below, so there is no imported class to reference here.
+        type PusherClient = {
+            subscribe: (channel: string) => {
+                bind: (event: string, handler: () => void) => void;
+            };
+            unsubscribe: (channel: string) => void;
+            disconnect: () => void;
+        };
+
+        let pusher: PusherClient | null = null;
         let channelName = '';
 
         async function setupPusherListener() {
             try {
-                const key = await SecureStore.getItemAsync('secure_admin_api_key');
+                const key = await getStoredToken();
                 if (!key) return;
 
                 const payload = decodeJwt(key);
                 if (!payload || !payload.jti) {
-                    console.warn('Unable to decode JWT JTI for revocation listener.');
+                    logger.warn('Unable to decode JWT JTI for revocation listener.');
                     return;
                 }
 
@@ -81,7 +113,7 @@ export default function RootLayout() {
                 const pusherCluster = process.env.EXPO_PUBLIC_PUSHER_CLUSTER;
 
                 if (!pusherKey || !pusherCluster) {
-                    console.warn('Pusher environment variables are not configured.');
+                    logger.warn('Pusher environment variables are not configured.');
                     return;
                 }
 
@@ -98,27 +130,36 @@ export default function RootLayout() {
                 }
 
                 if (typeof PusherConstructor !== 'function') {
-                    console.error('Failed to resolve Pusher constructor. Module:', PusherModule);
+                    logger.error('Failed to resolve Pusher constructor. Module:', PusherModule);
                     return;
                 }
 
                 const client = new PusherConstructor(pusherKey, {
                     cluster: pusherCluster,
                     forceTLS: true,
+                    // Private channels are authorized server-side, so only the
+                    // device that owns this JTI can subscribe (M-05). The bearer
+                    // token identifies us to the auth endpoint.
+                    channelAuthorization: {
+                        endpoint: `${getApiUrl()}/api/v1/pusher/auth`,
+                        transport: 'ajax',
+                        headers: { Authorization: `Bearer ${key}` },
+                    },
                 });
                 pusher = client;
 
                 // 2. Define the channel name
-                channelName = `device-${payload.jti}`;
+                channelName = `private-device-${payload.jti}`;
 
                 // 3. Subscribe to the channel
                 const channel = client.subscribe(channelName);
 
                 // 4. Bind to the specific event
-                channel.bind('device_unlinked', async (data: any) => {
-                    console.log('⚠️ Remote wipe triggered by Global Admin!', data);
+                channel.bind('device_unlinked', async () => {
+                    // Deliberately logs nothing: the payload identifies the
+                    // device and the event itself is visible in the UI.
                     try {
-                        await SecureStore.deleteItemAsync('secure_admin_api_key');
+                        await clearStoredToken();
                         setIsAuthenticated(false);
                         Alert.alert(
                             'Access Revoked',
@@ -126,13 +167,13 @@ export default function RootLayout() {
                         );
                         router.replace('/(auth)/connect');
                     } catch (error) {
-                        console.error('Error removing secure api key', error);
+                        logger.error('Error removing secure api key', error);
                         setIsAuthenticated(false);
                         router.replace('/(auth)/connect');
                     }
                 });
             } catch (error) {
-                console.error('Error initializing Pusher listener:', error);
+                logger.error('Error initializing Pusher listener:', error);
             }
         }
 
@@ -184,7 +225,7 @@ export default function RootLayout() {
     }
 
     return (
-        <AuthContext.Provider value={{ setIsAuthenticated }}>
+        <AuthContext.Provider value={{ setIsAuthenticated, signOut }}>
             <NotificationsProvider>
                 <StatusBar style="dark" />
                 <Stack screenOptions={{ headerShown: false }}>

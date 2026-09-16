@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -103,7 +104,7 @@ export default function NotificationsScreen() {
     try {
       await loadNotifications(30, 0);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to load notifications:', e);
     } finally {
       setRefreshing(false);
     }
@@ -326,7 +327,7 @@ export default function NotificationsScreen() {
               </View>
               <Text className="text-lg font-sansBold text-foreground mt-4">All quiet for now</Text>
               <Text className="text-sm font-sans text-muted-foreground text-center mt-1 px-8">
-                You're completely up to date! Updates on asset approvals or system alerts will appear here.
+                You&apos;re completely up to date! Updates on asset approvals or system alerts will appear here.
               </Text>
             </View>
           }

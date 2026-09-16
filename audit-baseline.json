@@ -1,0 +1,11 @@
+{
+  "updated": "2026-08-19",
+  "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 11,
+    "high": 14,
+    "critical": 1,
+    "total": 26
+  }
+}

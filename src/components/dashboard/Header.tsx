@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger';
 import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet, Modal, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -5,7 +6,6 @@ import { Avatar } from '../ui/Avatar';
 import { fetchUserProfile, unlinkMe, type UserProfile } from '../../services/auth';
 import { Colors } from '../../constants/colors';
 import { useAuth } from '../../context/auth-context';
-import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import * as Device from 'expo-device';
 import { X, LogOut, Smartphone, ShieldCheck } from 'lucide-react-native';
@@ -20,7 +20,7 @@ export function Header() {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const { setIsAuthenticated } = useAuth();
+  const { signOut } = useAuth();
 
   useEffect(() => {
     let active = true;
@@ -31,7 +31,7 @@ export function Header() {
           setUser(profile);
         }
       } catch (err) {
-        console.error('Failed to load user profile in Header:', err);
+        logger.error('Failed to load user profile in Header:', err);
       }
     }
     loadProfile();
@@ -45,10 +45,9 @@ export function Header() {
     setModalVisible(false);
     try {
       await unlinkMe();
-      await SecureStore.deleteItemAsync('secure_admin_api_key');
-      setIsAuthenticated(false);
+      await signOut();
     } catch (e) {
-      console.error('Failed to unlink device', e);
+      logger.error('Failed to unlink device', e);
     }
   };
 

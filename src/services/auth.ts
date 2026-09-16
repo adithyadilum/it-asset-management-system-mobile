@@ -1,5 +1,7 @@
+import { logger } from '../lib/logger';
 import * as Device from 'expo-device';
-import * as SecureStore from 'expo-secure-store';
+
+import { fetchApi } from '../constants/api';
 
 
 export interface ExchangeResponse {
@@ -51,30 +53,16 @@ export async function exchangeMobileToken(pairingToken: string): Promise<string>
   const deviceOs = `${osName} ${Device.osVersion || ''}`.trim();
   const deviceModel = model;
 
-  const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  if (!API_URL) {
-    throw new Error('API URL is not configured in the environment.');
-  }
+  const result = await fetchApi<ExchangeResponse>(
+    '/api/auth/mobile-exchange',
+    {
+      method: 'POST',
+      requiresAuth: false,
+      body: { token: pairingToken, deviceName, deviceOs, deviceModel },
+    }
+  );
 
-  const response = await fetch(`${API_URL}/api/auth/mobile-exchange`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      token: pairingToken,
-      deviceName,
-      deviceOs,
-      deviceModel,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Exchange failed with status ${response.status}`);
-  }
-
-  const result: ExchangeResponse = await response.json();
   const token = result.token || result.accessToken;
-
   if (!token) {
     throw new Error('No token received from the server.');
   }
@@ -91,80 +79,53 @@ export interface UserProfile {
   avatarUrl?: string;
 }
 
-/**
- * Fetches the current logged-in user profile from the web API
- * and computes initials for avatar rendering.
- */
-export async function fetchUserProfile(): Promise<UserProfile> {
-  const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  if (!API_URL) {
-    throw new Error('API URL is not configured.');
-  }
+interface ProfileResponse {
+  data: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    avatarUrl?: string;
+  };
+}
 
-  const token = await SecureStore.getItemAsync('secure_admin_api_key');
-  if (!token) {
-    throw new Error('Not authenticated. Please re-pair your device.');
-  }
-
-  const response = await fetch(`${API_URL}/api/v1/profile`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `Failed to fetch user profile (status ${response.status})`
-    );
-  }
-
-  const result = await response.json();
-  const userData = result.data;
-
-  // Calculate initials from the full name
-  let initials = '';
-  if (userData.name) {
-    const parts = userData.name.trim().split(/\s+/);
-    initials = parts.length === 1
+/** Derives avatar initials from a display name, falling back to the email. */
+function deriveInitials(name?: string, email?: string): string {
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    return parts.length === 1
       ? parts[0].substring(0, 2).toUpperCase()
       : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  } else {
-    initials = userData.email ? userData.email.substring(0, 2).toUpperCase() : '--';
   }
+  return email ? email.substring(0, 2).toUpperCase() : '--';
+}
+
+/** Fetches the signed-in user's profile for the dashboard header. */
+export async function fetchUserProfile(): Promise<UserProfile> {
+  const result = await fetchApi<ProfileResponse>('/api/v1/profile');
+  const userData = result.data;
 
   return {
     id: userData.id,
     name: userData.name,
     email: userData.email,
     role: userData.role,
-    initials,
+    initials: deriveInitials(userData.name, userData.email),
     avatarUrl: userData.avatarUrl,
   };
 }
 
 /**
- * Tells the Next.js web backend to revoke this specific device
- * and visually remove it from the Linked Devices table in real-time.
+ * Asks the backend to revoke this device, which also removes it from the
+ * Linked Devices table on the web dashboard in real time.
+ *
+ * Best-effort by design: the caller signs out locally regardless, so a failure
+ * here must not block the user from leaving.
  */
 export async function unlinkMe(): Promise<void> {
-  const API_URL = process.env.EXPO_PUBLIC_API_URL;
-  if (!API_URL) return;
-
-  const token = await SecureStore.getItemAsync('secure_admin_api_key');
-  if (!token) return;
-
   try {
-    await fetch(`${API_URL}/api/v1/auth/unlink-me`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    await fetchApi<unknown>('/api/v1/auth/unlink-me', { method: 'POST' });
   } catch (error) {
-    console.error('Network error during unlinkMe:', error);
+    logger.error('Failed to notify the server of unlink:', error);
   }
 }
