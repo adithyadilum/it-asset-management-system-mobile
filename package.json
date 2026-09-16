@@ -33,7 +33,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.10",
-    "autoprefixer": "^10.5.0",
+    "autoprefixer": "^10.6.0",
     "babel-preset-expo": "~54.0.10",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~10.0.0",
