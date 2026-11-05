@@ -118,7 +118,7 @@ export default function ConnectScreen() {
     return (
       <View style={styles.scannerContainer}>
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="back"
           onBarcodeScanned={isLoading ? undefined : handleScan}
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}

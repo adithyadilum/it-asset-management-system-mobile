@@ -21,15 +21,15 @@ export function ScannerCard() {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(0.97, { damping: 15, stiffness: 300 }));
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(1, { damping: 15, stiffness: 300 }));
   };
 
   const handlePress = async () => {
@@ -71,11 +71,11 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   cardBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: Colors.primary,
   },
   patternOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10, 26, 138, 0.3)',
   },
   content: {

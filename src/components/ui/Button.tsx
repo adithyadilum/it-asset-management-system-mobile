@@ -43,15 +43,15 @@ export function Button({
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(0.97, { damping: 15, stiffness: 300 }));
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(1, { damping: 15, stiffness: 300 }));
   };
 
   return (
@@ -75,7 +75,13 @@ export function Button({
           {...props}
         >
           {icon && <View style={styles.iconWrapper}>{icon}</View>}
-          <Text style={[styles.baseText, variantTextStyles[variant], sizeTextStyles[size]]}>
+          <Text
+            style={[
+              styles.baseText,
+              variantTextStyles[variant],
+              sizeTextStyles[size],
+            ]}
+          >
             {children}
           </Text>
         </Pressable>

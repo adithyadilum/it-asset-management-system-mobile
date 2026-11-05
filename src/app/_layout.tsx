@@ -40,22 +40,21 @@ export default function RootLayout() {
   const router = useRouter();
 
   // Validates the stored token's role *and* expiry, evicting anything stale.
-  const checkAuth = useCallback(async () => {
-    try {
-      const key = await getStoredToken();
-      if (isStoredTokenUsable(key)) {
-        setIsAuthenticated(true);
-      } else {
-        if (key) await clearStoredToken();
-        setIsAuthenticated(false);
-      }
-    } catch (e) {
-      logger.error('Error reading from SecureStore', e);
-      setIsAuthenticated(false);
-    } finally {
-      setAuthLoading(false);
-    }
-  }, []);
+  const checkAuth = useCallback(
+    () =>
+      getStoredToken()
+        .then(async (key) => {
+          const usable = isStoredTokenUsable(key);
+          if (!usable && key) await clearStoredToken();
+          setIsAuthenticated(usable);
+        })
+        .catch((error) => {
+          logger.error('Error reading from SecureStore', error);
+          setIsAuthenticated(false);
+        })
+        .finally(() => setAuthLoading(false)),
+    []
+  );
 
   useEffect(() => {
     checkAuth();

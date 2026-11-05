@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Home, Package, Bell } from 'lucide-react-native';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Colors } from '../../constants/colors';
 import { useNotifications } from '../../context/notifications-context';
 
@@ -45,7 +45,9 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { unreadCount } = useNotifications();
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View
+      style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}
+    >
       {/* Hairline separator — not a harsh border */}
       <View style={styles.separator} />
 
@@ -87,7 +89,12 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               style={styles.tab}
             >
               {/* Active pill indicator above icon */}
-              <View style={[styles.pill, isFocused ? styles.pillActive : styles.pillInactive]} />
+              <View
+                style={[
+                  styles.pill,
+                  isFocused ? styles.pillActive : styles.pillInactive,
+                ]}
+              />
 
               {/* Icon with notification badge */}
               <View style={styles.iconWrap}>

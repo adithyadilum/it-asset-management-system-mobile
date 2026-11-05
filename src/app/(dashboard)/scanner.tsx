@@ -327,7 +327,7 @@ export default function ScannerScreen() {
       }}
     >
       <CameraView
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         facing="back"
         onBarcodeScanned={hasScanned ? undefined : handleBarCodeScanned}
         barcodeScannerSettings={{
@@ -338,7 +338,7 @@ export default function ScannerScreen() {
       {/* Center — Scanner reticle mathematically centered on the screen */}
       <View
         style={[
-          StyleSheet.absoluteFillObject,
+          StyleSheet.absoluteFill,
           { alignItems: 'center', justifyContent: 'center' },
         ]}
         pointerEvents="none"
@@ -436,7 +436,7 @@ export default function ScannerScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         >
           <Animated.View
             entering={FadeIn.duration(200)}
@@ -444,7 +444,7 @@ export default function ScannerScreen() {
             style={styles.bottomSheetContainer}
           >
             <TouchableWithoutFeedback onPress={closeBottomSheet}>
-              <View style={StyleSheet.absoluteFillObject} />
+              <View style={StyleSheet.absoluteFill} />
             </TouchableWithoutFeedback>
 
             <Animated.View

@@ -1,5 +1,5 @@
 import { toMessage } from '../../../lib/errors';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -8,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   Animated,
+  useAnimatedValue,
   ActivityIndicator,
   Platform,
 } from 'react-native';
@@ -50,20 +51,12 @@ export function AcknowledgmentSheet({
   onConfirm,
 }: AcknowledgmentSheetProps) {
   const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(700)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useAnimatedValue(700);
+  const backdropAnim = useAnimatedValue(0);
 
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (visible && assignment) {
-      setAcknowledged(false);
-      setConfirmError(null);
-      setConfirming(false);
-    }
-  }, [visible, assignment]);
 
   useEffect(() => {
     if (visible) {
@@ -307,7 +300,7 @@ export function AcknowledgmentSheet({
 
 const sheet = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   shadow: {

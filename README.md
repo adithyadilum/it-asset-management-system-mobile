@@ -20,7 +20,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 
 ## Tech Stack
 
-* **Framework**: [React Native](https://reactnative.dev/) / [Expo SDK 54](https://expo.dev/)
+* **Framework**: [React Native](https://reactnative.dev/) / [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)
 * **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based native routing)
 * **Styling**: [NativeWind v4](https://www.nativewind.dev/) (Tailwind CSS engine for React Native)
 * **Language**: TypeScript
@@ -56,7 +56,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 
 ### 1. Prerequisites
 
-- **Node.js**: 20.x or higher
+- **Node.js**: 22.13 or higher (Node 22 LTS is used in CI)
 - **Expo Go**: Installed on your physical iOS/Android device (or local simulator)
 - **Backend**: EITAMS Next.js Server running locally (or via Ngrok)
 
@@ -82,7 +82,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 
 4. **Start the Metro Bundler**:
    ```bash
-   npx expo start -c
+   npx expo start --clear
    ```
    - Press **`s`** to switch to development build.
    - Press **`w`** to test basic UI layouts in a web browser.

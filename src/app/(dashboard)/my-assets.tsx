@@ -288,22 +288,28 @@ export default function MyAssetsScreen() {
       )}
 
       {/* ── Acknowledgment Bottom Sheet ── */}
-      <AcknowledgmentSheet
-        visible={sheetVisible}
-        assignment={activeAssignment}
-        onClose={closeSheet}
-        onConfirm={handleConfirm}
-      />
+      {sheetVisible && (
+        <AcknowledgmentSheet
+          key={activeAssignment?.assignmentId}
+          visible={sheetVisible}
+          assignment={activeAssignment}
+          onClose={closeSheet}
+          onConfirm={handleConfirm}
+        />
+      )}
 
       {/* ── Asset Details Bottom Sheet ── */}
-      <AssetDetailsSheet
-        visible={detailsVisible}
-        asset={selectedAsset}
-        onClose={closeDetails}
-        onIssueReported={() => {
-          void load();
-        }}
-      />
+      {detailsVisible && (
+        <AssetDetailsSheet
+          key={selectedAsset?.id}
+          visible={detailsVisible}
+          asset={selectedAsset}
+          onClose={closeDetails}
+          onIssueReported={() => {
+            void load();
+          }}
+        />
+      )}
     </View>
   );
 }

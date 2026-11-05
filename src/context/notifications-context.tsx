@@ -6,6 +6,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useRef,
 } from 'react';
@@ -62,7 +63,9 @@ export function NotificationsProvider({
   const pendingReads = useRef(new Set<string>()),
     allReadBusy = useRef(false);
   const itemsRef = useRef(notifications);
-  itemsRef.current = notifications;
+  useLayoutEffect(() => {
+    itemsRef.current = notifications;
+  }, [notifications]);
   const prevUnreadCountRef = useRef(-1);
   const loadUnreadCount = useCallback(async () => {
     try {

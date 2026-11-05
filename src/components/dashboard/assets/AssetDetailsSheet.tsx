@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   Animated,
+  useAnimatedValue,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,14 +51,11 @@ export function AssetDetailsSheet({
   const insets = useSafeAreaInsets();
   const [reporting, setReporting] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
-  useEffect(() => {
-    if (!visible) setReporting(false);
-  }, [visible]);
   const close = () => {
     if (!reportBusy) onClose();
   };
-  const slideAnim = useRef(new Animated.Value(700)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useAnimatedValue(700);
+  const backdropAnim = useAnimatedValue(0);
 
   useEffect(() => {
     if (!asset) return;
@@ -289,7 +287,7 @@ export function AssetDetailsSheet({
 
 const sheet = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   shadow: {
