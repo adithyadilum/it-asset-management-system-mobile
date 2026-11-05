@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import { IssueReportForm } from './IssueReportForm';
 import { Badge } from '../../ui/Badge';
 import { getAssetPresentation, getReturnStatus } from './AssetRow';
 import type { AssetEntry } from '../../../services/assets';
@@ -20,6 +21,7 @@ interface AssetDetailsSheetProps {
   asset: AssetEntry | null;
   visible: boolean;
   onClose: () => void;
+  onIssueReported?: () => void;
 }
 
 function formatDate(iso?: string): string {
@@ -43,8 +45,17 @@ export function AssetDetailsSheet({
   asset,
   visible,
   onClose,
+  onIssueReported,
 }: AssetDetailsSheetProps) {
   const insets = useSafeAreaInsets();
+  const [reporting, setReporting] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
+  useEffect(() => {
+    if (!visible) setReporting(false);
+  }, [visible]);
+  const close = () => {
+    if (!reportBusy) onClose();
+  };
   const slideAnim = useRef(new Animated.Value(700)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
@@ -79,7 +90,7 @@ export function AssetDetailsSheet({
         }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, asset, slideAnim, backdropAnim]);
 
   if (!asset) return null;
 
@@ -92,7 +103,7 @@ export function AssetDetailsSheet({
       visible={visible}
       transparent
       animationType="none"
-      onRequestClose={onClose}
+      onRequestClose={close}
       statusBarTranslucent
     >
       {/* Backdrop */}
@@ -100,7 +111,7 @@ export function AssetDetailsSheet({
         style={[sheet.backdrop, { opacity: backdropAnim }]}
         pointerEvents={visible ? 'auto' : 'none'}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
       </Animated.View>
 
       {/* Sheet */}
@@ -123,7 +134,7 @@ export function AssetDetailsSheet({
           <Pressable
             className="p-1"
             style={({ pressed }) => pressed && { opacity: 0.5 }}
-            onPress={onClose}
+            onPress={close}
             accessibilityLabel="Close"
           >
             <X size={18} color="#475569" strokeWidth={2.5} />
@@ -132,7 +143,11 @@ export function AssetDetailsSheet({
 
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8, gap: 14 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: 8,
+            gap: 14,
+          }}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
@@ -141,7 +156,10 @@ export function AssetDetailsSheet({
             {/* Icon and Name */}
             <View className="flex-row items-center gap-3.5 mb-4">
               <IconComponent size={32} color="#0A1A8A" strokeWidth={1.5} />
-              <Text className="text-[19px] font-sansBold text-slate-900 flex-1" numberOfLines={1}>
+              <Text
+                className="text-[19px] font-sansBold text-slate-900 flex-1"
+                numberOfLines={1}
+              >
                 {asset.name}
               </Text>
             </View>
@@ -149,43 +167,73 @@ export function AssetDetailsSheet({
             {/* Key-Value details */}
             <View className="gap-2.5">
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Asset ID:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{asset.tagId}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Asset ID:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {asset.tagId}
+                </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Status:</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Status:
+                </Text>
                 <View className="flex-1 items-start">
                   <Badge
-                    type={returnInfo.isOverdue ? 'lost' : (asset.status as ActivityEventType)}
-                    label={returnInfo.isOverdue ? 'Overdue' : undefined}
+                    type={
+                      returnInfo.isOverdue
+                        ? 'lost'
+                        : (asset.status as ActivityEventType)
+                    }
+                    label={returnInfo.isOverdue ? 'Overdue' : asset.statusLabel}
                   />
                 </View>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Condition:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{asset.condition ?? 'Good'}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Condition:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {asset.condition ?? 'Not recorded'}
+                </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Assigned By:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{asset.assignedByName ?? 'IT Operations'}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Assigned By:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {asset.assignedByName ?? 'Not recorded'}
+                </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Assigned On:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{formatDate(asset.assignedDate)}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Assigned On:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {formatDate(asset.assignedDate)}
+                </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Return By:</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Return By:
+                </Text>
                 <Text
                   className={`flex-1 text-sm font-sans ${
-                    returnInfo.isOverdue ? 'text-rose-600 font-sansBold' : 'text-slate-800'
+                    returnInfo.isOverdue
+                      ? 'text-rose-600 font-sansBold'
+                      : 'text-slate-800'
                   }`}
                 >
-                  {asset.expectedReturnDate ? formatDate(asset.expectedReturnDate) : 'Open-ended'}
+                  {asset.expectedReturnDate
+                    ? formatDate(asset.expectedReturnDate)
+                    : 'Open-ended'}
                 </Text>
               </View>
               {asset.expectedReturnDate && (
                 <View className="flex-row items-center">
-                  <Text className="w-28 text-sm font-sans text-slate-500">Time Left:</Text>
+                  <Text className="w-28 text-sm font-sans text-slate-500">
+                    Time Left:
+                  </Text>
                   <Text
                     className={`flex-1 text-sm font-sansBold ${
                       returnInfo.isOverdue ? 'text-rose-600' : 'text-amber-600'
@@ -198,24 +246,41 @@ export function AssetDetailsSheet({
             </View>
           </View>
 
-          {/* ── Help / Policy disclaimer ── */}
-          <Text className="text-sm font-sans text-slate-500 leading-relaxed mt-1">
-            If this device requires support, repairs, or has been lost, please tap the Report Issue button to raise a support ticket.
-          </Text>
-
-          {/* ── Action buttons ── */}
-          <View className="mt-4 pb-2">
-            {/* Report Issue — outline */}
-            <Pressable
-              className="w-full bg-white border border-slate-200 py-3.5 rounded-xl items-center justify-center"
-              style={({ pressed }) => pressed && { opacity: 0.7 }}
-              onPress={onClose}
-            >
-              <Text className="text-slate-800 text-sm font-sansBold text-center">
-                Report Issue
+          {reporting ? (
+            <IssueReportForm
+              assetId={asset.id}
+              assetTag={asset.tagId}
+              onBusyChange={setReportBusy}
+              onCancel={() => setReporting(false)}
+              onSubmitted={() => {
+                setReporting(false);
+                onClose();
+                onIssueReported?.();
+              }}
+            />
+          ) : (
+            <>
+              {/* ── Help / Policy disclaimer ── */}
+              <Text className="text-sm font-sans text-slate-500 leading-relaxed mt-1">
+                If this device requires support, repairs, or has been lost,
+                please tap the Report Issue button to raise a support ticket.
               </Text>
-            </Pressable>
-          </View>
+
+              {/* ── Action buttons ── */}
+              <View className="mt-4 pb-2">
+                {/* Report Issue — outline */}
+                <Pressable
+                  className="w-full bg-white border border-slate-200 py-3.5 rounded-xl items-center justify-center"
+                  style={({ pressed }) => pressed && { opacity: 0.7 }}
+                  onPress={() => setReporting(true)}
+                >
+                  <Text className="text-slate-800 text-sm font-sansBold text-center">
+                    Report Issue
+                  </Text>
+                </Pressable>
+              </View>
+            </>
+          )}
         </ScrollView>
       </Animated.View>
     </Modal>

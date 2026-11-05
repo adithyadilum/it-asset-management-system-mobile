@@ -6,7 +6,10 @@ export interface AssetEntry {
   assignmentId: number;
   name: string;
   tagId: string;
-  status: 'new' | 'assigned' | 'lost' | 'disposed' | 'repair';
+  status: string;
+  statusLabel?: string;
+  serialNumber?: string;
+  imageUrl?: string;
   /** Raw assignment state from the DB e.g. 'pending approval', 'assigned', 'overdue' */
   state: string;
   category?: string;
@@ -45,7 +48,9 @@ export async function fetchMyAssets(): Promise<{
   const pendingAssignments = result.data.filter(
     (a): a is PendingAssignment => a.state === 'pending approval'
   );
-  const activeAssets = result.data.filter((a) => a.state !== 'pending approval');
+  const activeAssets = result.data.filter(
+    (a) => a.state !== 'pending approval'
+  );
 
   return { activeAssets, pendingAssignments };
 }

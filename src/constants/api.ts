@@ -63,7 +63,9 @@ export class ApiError extends Error {
  * return to pairing, so callers only need to render the message.
  */
 export class SessionExpiredError extends ApiError {
-  constructor(message = 'Your session has expired. Please re-pair this device.') {
+  constructor(
+    message = 'Your session has expired. Please re-pair this device.'
+  ) {
     super(message, 401);
     this.name = 'SessionExpiredError';
   }
@@ -77,10 +79,7 @@ export class SessionExpiredError extends ApiError {
  */
 export class RateLimitError extends ApiError {
   constructor(public readonly retryAfterSeconds: number) {
-    super(
-      `Too many requests. Try again in ${retryAfterSeconds}s.`,
-      429
-    );
+    super(`Too many requests. Try again in ${retryAfterSeconds}s.`, 429);
     this.name = 'RateLimitError';
   }
 }
@@ -141,8 +140,10 @@ export function getApiUrl(): string {
     throw new Error(`EXPO_PUBLIC_API_URL is not a valid URL: ${url}`);
   }
 
+  if (!['http:', 'https:'].includes(parsed.protocol))
+    throw new Error('EXPO_PUBLIC_API_URL must use HTTP or HTTPS.');
   if (parsed.protocol === 'https:') {
-    return url;
+    return url.replace(/\/+$/, '');
   }
 
   if (!__DEV__) {
@@ -160,7 +161,7 @@ export function getApiUrl(): string {
     );
   }
 
-  return url;
+  return url.replace(/\/+$/, '');
 }
 
 export async function getStoredToken(): Promise<string | null> {
@@ -212,10 +213,15 @@ export async function fetchApi<T>(
     ...(customHeaders as Record<string, string> | undefined),
   };
 
+  let requestToken: string | null = null;
   if (requiresAuth) {
     const token = await getStoredToken();
+    requestToken = token;
     if (!token) {
-      throw new ApiError('Not authenticated. Please re-pair your device.', 401);
+      onUnauthenticated?.();
+      throw new SessionExpiredError(
+        'Not authenticated. Please re-pair your device.'
+      );
     }
     headers.Authorization = `Bearer ${token}`;
   }
@@ -261,8 +267,11 @@ export async function fetchApi<T>(
     // The token is no longer accepted — revoked, expired, or the account was
     // deactivated. Drop it and send the user back to pairing rather than
     // leaving them on a dashboard where every request fails.
-    await clearStoredToken();
-    onUnauthenticated?.();
+    // A delayed response from a previous pairing must not clear a newer session.
+    if (requiresAuth && (await getStoredToken()) === requestToken) {
+      await clearStoredToken();
+      onUnauthenticated?.();
+    }
     throw new SessionExpiredError(
       await readErrorMessage(
         response,
@@ -276,7 +285,10 @@ export async function fetchApi<T>(
     // window so a skewed clock cannot lock the UI out for minutes.
     const reset = Number(response.headers.get('X-RateLimit-Reset') ?? 0);
     const remaining = reset - Math.floor(Date.now() / 1000);
-    const retryAfter = Math.min(60, Math.max(1, Number.isFinite(remaining) ? remaining : 1));
+    const retryAfter = Math.min(
+      60,
+      Math.max(1, Number.isFinite(remaining) ? remaining : 1)
+    );
     throw new RateLimitError(retryAfter);
   }
 

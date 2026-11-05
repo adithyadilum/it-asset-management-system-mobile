@@ -3,7 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet, Modal, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../ui/Avatar';
-import { fetchUserProfile, unlinkMe, type UserProfile } from '../../services/auth';
+import {
+  fetchUserProfile,
+  unlinkMe,
+  type UserProfile,
+} from '../../services/auth';
+import { useNetInfo } from '@react-native-community/netinfo';
+import { getStoredToken } from '../../constants/api';
 import { Colors } from '../../constants/colors';
 import { useAuth } from '../../context/auth-context';
 import * as Haptics from 'expo-haptics';
@@ -21,6 +27,7 @@ export function Header() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const { signOut } = useAuth();
+  const network = useNetInfo();
 
   useEffect(() => {
     let active = true;
@@ -44,8 +51,9 @@ export function Header() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setModalVisible(false);
     try {
-      await unlinkMe();
+      const token = await getStoredToken();
       await signOut();
+      if (token) void unlinkMe(token);
     } catch (e) {
       logger.error('Failed to unlink device', e);
     }
@@ -96,7 +104,10 @@ export function Header() {
             <View style={styles.modalHeader}>
               <Pressable
                 onPress={() => setModalVisible(false)}
-                style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && { opacity: 0.6 },
+                ]}
               >
                 <X size={20} color={Colors.foreground} />
               </Pressable>
@@ -123,13 +134,15 @@ export function Header() {
                 {user?.name || 'Loading user…'}
               </Text>
 
-              <Text style={styles.profileEmail}>
-                {user?.email || ''}
-              </Text>
+              <Text style={styles.profileEmail}>{user?.email || ''}</Text>
 
               {user?.role && (
                 <View style={styles.roleBadge}>
-                  <ShieldCheck size={11} color={Colors.primary} style={{ marginRight: 4 }} />
+                  <ShieldCheck
+                    size={11}
+                    color={Colors.primary}
+                    style={{ marginRight: 4 }}
+                  />
                   <Text style={styles.roleBadgeText}>
                     {user.role.replace(/([A-Z])/g, ' $1').trim()}
                   </Text>
@@ -140,14 +153,20 @@ export function Header() {
             {/* Device Info Card (Gmail Style "Manage your Account" / details box) */}
             <View style={styles.deviceCard}>
               <View style={styles.deviceHeaderRow}>
-                <Smartphone size={14} color={Colors.primary} style={{ marginRight: 6 }} />
+                <Smartphone
+                  size={14}
+                  color={Colors.primary}
+                  style={{ marginRight: 6 }}
+                />
                 <Text style={styles.deviceHeaderTitle}>This Linked Device</Text>
               </View>
 
               <View style={styles.deviceDetails}>
                 <View>
                   <Text style={styles.deviceLabel}>Device Model</Text>
-                  <Text style={styles.deviceValue}>{Device.modelName || 'Unknown Device'}</Text>
+                  <Text style={styles.deviceValue}>
+                    {Device.modelName || 'Unknown Device'}
+                  </Text>
                 </View>
 
                 <View style={{ marginTop: 8 }}>
@@ -160,7 +179,11 @@ export function Header() {
 
               <View style={styles.connectionStatus}>
                 <View style={styles.greenDot} />
-                <Text style={styles.connectionText}>Active Secure Connection</Text>
+                <Text style={styles.connectionText}>
+                  {network.isConnected === false
+                    ? 'Offline - device paired'
+                    : 'Device paired'}
+                </Text>
               </View>
             </View>
 
@@ -172,10 +195,14 @@ export function Header() {
               onPress={handleUnlink}
               style={({ pressed }) => [
                 styles.unlinkRow,
-                pressed && { backgroundColor: Colors.muted }
+                pressed && { backgroundColor: Colors.muted },
               ]}
             >
-              <LogOut size={16} color={Colors.destructive} style={{ marginRight: 10 }} />
+              <LogOut
+                size={16}
+                color={Colors.destructive}
+                style={{ marginRight: 10 }}
+              />
               <Text style={styles.unlinkText}>Unlink Companion Device</Text>
             </Pressable>
 

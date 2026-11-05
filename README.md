@@ -1,19 +1,20 @@
 # EITAMS Mobile Companion App
 
-The official React Native mobile companion for the EITAMS (Enterprise IT Asset Management System) platform. Built using Expo, this application acts as a high-speed utility for Global Administrators to manage and audit physical hardware in the field.
+The official React Native mobile companion for the EITAMS (Enterprise IT Asset Management System) platform. Built using Expo, this application acts as a high-speed utility for IT Operators and Global Administrators to manage and audit physical hardware in the field.
 
-> **Access:** device pairing is restricted to the **GlobalAdmin** role. `canAccessMobile` on the
-> backend also permits ITOperator and FinancialAuditor, but the pairing endpoints do not — see F-4 in
-> [`docs/MOBILE_AUDIT_2026-08-18.md`](docs/MOBILE_AUDIT_2026-08-18.md).
+> **Access:** desktop QR pairing is required. Both **GlobalAdmin** and **ITOperator** can pair devices, manage their linked devices, and use the companion app. FinancialAuditors and Employees cannot pair.
 
 ---
 
 ## Key Capabilities
 
 * **Tethered Data Entry (Barcode Injection)**: Scan manufacturer 1D barcodes (Code 128, Code 39, UPC, EAN) using the camera to instantly inject values into the active input field on your EITAMS desktop screen via Pusher WebSockets.
-* **Remote Control & Sync**: Scanning a TIQRI asset QR code automatically slides open the Asset Details Panel on your active desktop monitor.
 * **Standalone Lookup**: Scan QR codes on-the-go to load live asset metadata (Asset Tag, Status, Model, Location, and current Custodian) in a native bottom-sheet overlay.
 * **Identity Handshake**: Link the mobile client securely to EITAMS desktop sessions using encrypted JWT keys with `expo-secure-store` and `expo-camera` for scan handshake.
+* **My Assets**: Review assigned equipment, accept pending handovers, and report a fault from the asset sheet. Reporting starts the existing repair workflow and closes custody; it is restricted to asset-management roles.
+* **Actionable Alerts**: Load older alerts, mark them read, and open My Assets natively. Other supported alert links open the trusted web deployment using its normal browser sign-in.
+* **Honest Dashboard States**: Metrics show loading and retry states when the API is unavailable. Unknown asset statuses keep their actual labels.
+
 
 ---
 
@@ -100,11 +101,13 @@ CI runs the same gates on every push and pull request to `main` and `dev`.
 
 ### 4. Native Builds
 
-The app runs in Expo Go for day-to-day development. Standalone builds go through EAS:
+The app runs in Expo Go for day-to-day development. Camera permission changes (including removal of Android microphone access) require a fresh native build. Standalone builds go through EAS:
 
 ```bash
 npx eas build --profile development --platform android
 npx eas build --profile production --platform all
+# Local bundle check without publishing:
+npx expo export --platform android --output-dir dist
 ```
 
 ---

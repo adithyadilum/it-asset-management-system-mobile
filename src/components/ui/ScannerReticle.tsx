@@ -43,7 +43,7 @@ export function ScannerReticle({
       -1,
       true
     );
-  }, []);
+  }, [pulseOpacity]);
 
   const cornerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: pulseOpacity.value,
@@ -96,10 +96,34 @@ export function ScannerReticle({
 
   return (
     <View style={[dynamicStyles.container, style]}>
-      <Animated.View style={[dynamicStyles.corner, dynamicStyles.topLeft, cornerAnimatedStyle]} />
-      <Animated.View style={[dynamicStyles.corner, dynamicStyles.topRight, cornerAnimatedStyle]} />
-      <Animated.View style={[dynamicStyles.corner, dynamicStyles.bottomLeft, cornerAnimatedStyle]} />
-      <Animated.View style={[dynamicStyles.corner, dynamicStyles.bottomRight, cornerAnimatedStyle]} />
+      <Animated.View
+        style={[
+          dynamicStyles.corner,
+          dynamicStyles.topLeft,
+          cornerAnimatedStyle,
+        ]}
+      />
+      <Animated.View
+        style={[
+          dynamicStyles.corner,
+          dynamicStyles.topRight,
+          cornerAnimatedStyle,
+        ]}
+      />
+      <Animated.View
+        style={[
+          dynamicStyles.corner,
+          dynamicStyles.bottomLeft,
+          cornerAnimatedStyle,
+        ]}
+      />
+      <Animated.View
+        style={[
+          dynamicStyles.corner,
+          dynamicStyles.bottomRight,
+          cornerAnimatedStyle,
+        ]}
+      />
     </View>
   );
 }

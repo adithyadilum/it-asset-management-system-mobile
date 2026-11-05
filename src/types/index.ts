@@ -24,7 +24,8 @@ export interface Asset {
   category?: string;
 }
 
-export type ActivityEventType = 'assigned' | 'lost' | 'repair' | 'disposed' | 'new';
+export type ActivityEventType =
+  'assigned' | 'lost' | 'repair' | 'disposed' | 'new';
 
 export interface ActivityEvent {
   id: string;
@@ -37,7 +38,7 @@ export interface ActivityEvent {
 
 export interface KPIMetric {
   label: string;
-  value: number;
+  value: number | null;
   /** Lucide icon component to render inside the icon circle */
   icon: LucideIcon;
   accentColor: string;

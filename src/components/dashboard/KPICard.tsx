@@ -21,9 +21,7 @@ export function KPICard({ metric }: KPICardProps) {
       </View>
 
       {/* Value */}
-      <Text style={styles.value}>
-        {metric.value}
-      </Text>
+      <Text style={styles.value}>{metric.value ?? '\u2014'}</Text>
 
       {/* Label */}
       <Text style={styles.label} numberOfLines={2}>

@@ -13,7 +13,6 @@ import {
   Tablet,
 } from 'lucide-react-native';
 import { Badge } from '../../ui/Badge';
-import { Colors } from '../../../constants/colors';
 import type { AssetEntry } from '../../../services/assets';
 import type { ActivityEventType } from '../../../types';
 
@@ -26,13 +25,17 @@ const PILLAR_MAP: Record<
   string,
   { label: string; icon: React.ComponentType<any> }
 > = {
+  Hardware: { label: 'Device', icon: Laptop },
   'IT & Digital': { label: 'Device', icon: Laptop },
   Software: { label: 'Software', icon: Code },
   'Office Furniture': { label: 'Furniture', icon: Armchair },
   'Office Electronics': { label: 'Electronics', icon: Speaker },
 };
 
-export function getAssetPresentation(pillar: string | undefined, modelName: string) {
+export function getAssetPresentation(
+  pillar: string | undefined,
+  modelName: string
+) {
   if (pillar && PILLAR_MAP[pillar]) {
     return PILLAR_MAP[pillar];
   }
@@ -136,7 +139,10 @@ function formatAssignedDate(dateStr?: string): string | null {
  * Redesigned to exactly match the flat border style, typography,
  * and layout structure of the web app's asset card.
  */
-export const AssetRow = React.memo(function AssetRow({ asset, onPress }: AssetRowProps) {
+export const AssetRow = React.memo(function AssetRow({
+  asset,
+  onPress,
+}: AssetRowProps) {
   const presentation = getAssetPresentation(asset.pillar, asset.name);
   const IconComponent = presentation.icon;
   const formattedDate = formatAssignedDate(asset.assignedDate);
@@ -163,14 +169,17 @@ export const AssetRow = React.memo(function AssetRow({ asset, onPress }: AssetRo
         </Text>
         <Badge
           type={isOverdue ? 'lost' : (asset.status as ActivityEventType)}
-          label={isOverdue ? 'Overdue' : undefined}
+          label={isOverdue ? 'Overdue' : asset.statusLabel}
         />
       </View>
 
       {/* Middle: Icon and Name */}
       <View className="flex-row items-center gap-3 mb-3.5">
         <IconComponent size={26} color="#475569" strokeWidth={1.5} />
-        <Text className="text-lg font-sansBold text-slate-900 flex-1" numberOfLines={1}>
+        <Text
+          className="text-lg font-sansBold text-slate-900 flex-1"
+          numberOfLines={1}
+        >
           {asset.name}
         </Text>
       </View>
@@ -184,7 +193,9 @@ export const AssetRow = React.memo(function AssetRow({ asset, onPress }: AssetRo
           Assigned: {formattedDate ?? '-'}
         </Text>
         {returnInfo.label && asset.expectedReturnDate && (
-          <Text className={`text-[13px] leading-5 ${isOverdue ? 'text-rose-600 font-sansBold' : 'text-amber-600 font-sansBold'}`}>
+          <Text
+            className={`text-[13px] leading-5 ${isOverdue ? 'text-rose-600 font-sansBold' : 'text-amber-600 font-sansBold'}`}
+          >
             {returnInfo.label}
           </Text>
         )}

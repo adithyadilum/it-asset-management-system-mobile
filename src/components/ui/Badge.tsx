@@ -9,14 +9,21 @@ import {
 import type { ActivityEventType } from '../../types';
 
 interface BadgeProps {
-  type: ActivityEventType;
+  type: string;
   label?: string;
   className?: string;
 }
 
 const badgeConfig: Record<
   ActivityEventType,
-  { label: string; icon: React.ComponentType<any>; bgClass: string; borderClass: string; textClass: string; iconColor: string }
+  {
+    label: string;
+    icon: React.ComponentType<any>;
+    bgClass: string;
+    borderClass: string;
+    textClass: string;
+    iconColor: string;
+  }
 > = {
   assigned: {
     label: 'Assigned',
@@ -61,7 +68,14 @@ const badgeConfig: Record<
 };
 
 export function Badge({ type, label, className = '' }: BadgeProps) {
-  const config = badgeConfig[type];
+  const config = badgeConfig[type as ActivityEventType] ?? {
+    label: type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    icon: AlertCircle,
+    bgClass: 'bg-slate-50',
+    borderClass: 'border-slate-300',
+    textClass: 'text-slate-700',
+    iconColor: '#64748b',
+  };
   if (!config) return null;
   const IconComponent = config.icon;
 

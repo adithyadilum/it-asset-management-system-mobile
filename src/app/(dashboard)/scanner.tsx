@@ -1,11 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TouchableWithoutFeedback, Dimensions, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  TouchableWithoutFeedback,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn, FadeInDown, FadeOutDown, SlideInDown, SlideOutDown, FadeOut } from 'react-native-reanimated';
-import { Laptop, MapPin, User, X, ChevronLeft } from 'lucide-react-native';
+import Animated, {
+  FadeIn,
+  SlideInDown,
+  SlideOutDown,
+  FadeOut,
+} from 'react-native-reanimated';
+import { Laptop, MapPin, User, ChevronLeft } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
 import { fetchScannedAssetDetails, injectBarcode } from '../../services/scan';
@@ -52,30 +69,55 @@ export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [mode, setMode] = useState<ScanMode>('qr');
   const [hasScanned, setHasScanned] = useState(false);
+  const permissionRequested = useRef(false);
+  const scanLock = useRef(false),
+    issueLock = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   /** Seconds remaining on a server-imposed cooldown; 0 when scanning is live. */
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const [scannedAsset, setScannedAsset] = useState<AssetDetailsData | null>(null);
+  const [scannedAsset, setScannedAsset] = useState<AssetDetailsData | null>(
+    null
+  );
   const [showReportForm, setShowReportForm] = useState(false);
   const [issueNote, setIssueNote] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
   const router = useRouter();
 
+  const resumeScanning = () => {
+    scanLock.current = false;
+    setHasScanned(false);
+  };
   // Request permission on mount if needed
   React.useEffect(() => {
-    if (!permission?.granted) {
+    if (
+      permission &&
+      !permission.granted &&
+      permission.canAskAgain &&
+      !permissionRequested.current
+    ) {
+      permissionRequested.current = true;
       requestPermission();
     }
-  }, []);
+  }, [permission, requestPermission]);
 
   const barcodeTypes = [
-    'qr', 'code128', 'code39', 'upc_a', 'upc_e', 'ean13', 'ean8'
+    'qr',
+    'code128',
+    'code39',
+    'upc_a',
+    'upc_e',
+    'ean13',
+    'ean8',
   ] as const;
 
-  const [layout, setLayout] = useState<{ width: number; height: number } | null>(null);
+  const [layout, setLayout] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   const handleBarCodeScanned = async (scanResult: ScanGeometry) => {
-    if (hasScanned || !layout) return;
+    if (hasScanned || scanLock.current || cooldownSeconds > 0 || !layout)
+      return;
 
     const { data, type, bounds, cornerPoints, boundingBox } = scanResult;
 
@@ -101,7 +143,8 @@ export default function ScannerScreen() {
       barcodeCenterX = boundingBox.x + boundingBox.width / 2;
       barcodeCenterY = boundingBox.y + boundingBox.height / 2;
     } else if (cornerPoints && cornerPoints.length > 0) {
-      let sumX = 0; let sumY = 0;
+      let sumX = 0;
+      let sumY = 0;
       for (const p of cornerPoints) {
         sumX += p.x || p[0] || 0;
         sumY += p.y || p[1] || 0;
@@ -113,7 +156,7 @@ export default function ScannerScreen() {
     if (barcodeCenterX !== undefined && barcodeCenterY !== undefined) {
       // Add a generous buffer (60px) to allow scanning if they are mostly inside
       const buffer = 60;
-      const isInsideReticle = 
+      const isInsideReticle =
         barcodeCenterX >= reticleX - buffer &&
         barcodeCenterX <= reticleX + reticleWidth + buffer &&
         barcodeCenterY >= reticleY - buffer &&
@@ -123,36 +166,49 @@ export default function ScannerScreen() {
         return; // Ignore scan entirely
       }
     } else {
-      // Strict mode: If we can't determine the location at all, we MUST ignore it, 
+      // Strict mode: If we can't determine the location at all, we MUST ignore it,
       // otherwise it will scan everything on the screen simultaneously.
       return;
     }
 
+    scanLock.current = true;
     setHasScanned(true);
 
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
+      () => {}
+    );
 
     if (mode === 'barcode') {
       if (!data || data.trim().length === 0) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Invalid barcode', 'The barcode could not be read clearly.', [
-          { text: 'Try Again', onPress: () => setHasScanned(false) }
-        ]);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error
+        ).catch(() => {});
+        Alert.alert(
+          'Invalid barcode',
+          'The barcode could not be read clearly.',
+          [{ text: 'Try Again', onPress: () => resumeScanning() }]
+        );
         return;
       }
       setIsLoading(true);
       try {
         await injectBarcode(data);
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        ).catch(() => {});
         Alert.alert('Success', 'Barcode injected successfully', [
-          { text: 'OK', onPress: () => setHasScanned(false) }
+          { text: 'OK', onPress: () => resumeScanning() },
         ]);
       } catch (error) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error
+        ).catch(() => {});
         if (!startCooldownIfRateLimited(error)) {
-          Alert.alert('Invalid barcode', toMessage(error, 'Failed to inject barcode'), [
-            { text: 'Try Again', onPress: () => setHasScanned(false) }
-          ]);
+          Alert.alert(
+            'Invalid barcode',
+            toMessage(error, 'Failed to inject barcode'),
+            [{ text: 'Try Again', onPress: () => resumeScanning() }]
+          );
         }
       } finally {
         setIsLoading(false);
@@ -164,17 +220,21 @@ export default function ScannerScreen() {
 
     try {
       const asset = await fetchScannedAssetDetails(data);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success
+      ).catch(() => {});
       setScannedAsset(asset);
     } catch (error) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error
+      ).catch(() => {});
       if (!startCooldownIfRateLimited(error)) {
         Alert.alert(
           'Scan Failed',
           toMessage(error, 'Could not find asset details.'),
           [
-            { text: 'Try Again', onPress: () => setHasScanned(false) },
-            { text: 'Cancel', onPress: () => router.back(), style: 'cancel' }
+            { text: 'Try Again', onPress: () => resumeScanning() },
+            { text: 'Cancel', onPress: () => router.back(), style: 'cancel' },
           ]
         );
       }
@@ -191,7 +251,7 @@ export default function ScannerScreen() {
     const timer = setTimeout(() => {
       setCooldownSeconds((seconds) => {
         const next = seconds - 1;
-        if (next <= 0) setHasScanned(false);
+        if (next <= 0) resumeScanning();
         return next;
       });
     }, 1000);
@@ -208,26 +268,37 @@ export default function ScannerScreen() {
   const closeBottomSheet = () => {
     if (isSubmittingIssue) return;
     setScannedAsset(null);
-    setHasScanned(false);
+    resumeScanning();
     setShowReportForm(false);
     setIssueNote('');
   };
 
   const handleSubmitIssue = async () => {
-    if (!scannedAsset || !issueNote.trim()) return;
+    if (!scannedAsset || !issueNote.trim() || issueLock.current) return;
+    issueLock.current = true;
 
     setIsSubmittingIssue(true);
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+      () => {}
+    );
 
     try {
-      await reportAssetIssue(scannedAsset.asset.id, issueNote);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await reportAssetIssue(scannedAsset.asset.id, issueNote.trim());
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success
+      ).catch(() => {});
       Alert.alert('Success', 'Issue reported successfully.');
-      closeBottomSheet();
+      setScannedAsset(null);
+      resumeScanning();
+      setShowReportForm(false);
+      setIssueNote('');
     } catch (error) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error
+      ).catch(() => {});
       Alert.alert('Error', toMessage(error, 'Failed to report issue.'));
     } finally {
+      issueLock.current = false;
       setIsSubmittingIssue(false);
     }
   };
@@ -238,10 +309,7 @@ export default function ScannerScreen() {
         <Text className="text-white text-center px-8">
           Camera permission is required to scan codes.
         </Text>
-        <Pressable
-          onPress={requestPermission}
-          style={styles.permissionButton}
-        >
+        <Pressable onPress={requestPermission} style={styles.permissionButton}>
           <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </Pressable>
       </View>
@@ -249,12 +317,12 @@ export default function ScannerScreen() {
   }
 
   return (
-    <View 
+    <View
       className="flex-1 bg-black"
       onLayout={(e) => {
         setLayout({
           width: e.nativeEvent.layout.width,
-          height: e.nativeEvent.layout.height
+          height: e.nativeEvent.layout.height,
         });
       }}
     >
@@ -268,8 +336,14 @@ export default function ScannerScreen() {
       />
 
       {/* Center — Scanner reticle mathematically centered on the screen */}
-      <View style={[StyleSheet.absoluteFillObject, { alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
-        <ScannerReticle 
+      <View
+        style={[
+          StyleSheet.absoluteFillObject,
+          { alignItems: 'center', justifyContent: 'center' },
+        ]}
+        pointerEvents="none"
+      >
+        <ScannerReticle
           width={mode === 'qr' ? 250 : 320}
           height={mode === 'qr' ? 250 : 150}
         />
@@ -278,7 +352,10 @@ export default function ScannerScreen() {
       {/* Semi-transparent overlay */}
       <SafeAreaView className="flex-1 justify-between" pointerEvents="box-none">
         {/* Top section — Mode selector + instructions */}
-        <Animated.View entering={FadeIn.duration(400)} className="items-center mt-6 px-6">
+        <Animated.View
+          entering={FadeIn.duration(400)}
+          className="items-center mt-6 px-6"
+        >
           {/* Mode selector */}
           <View style={styles.modeSelector}>
             <Pressable
@@ -287,9 +364,11 @@ export default function ScannerScreen() {
                 mode === 'qr' && styles.modeButtonActive,
               ]}
               onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                await Haptics.impactAsync(
+                  Haptics.ImpactFeedbackStyle.Light
+                ).catch(() => {});
                 setMode('qr');
-                setHasScanned(false);
+                resumeScanning();
               }}
             >
               <Text
@@ -307,9 +386,11 @@ export default function ScannerScreen() {
                 mode === 'barcode' && styles.modeButtonActive,
               ]}
               onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                await Haptics.impactAsync(
+                  Haptics.ImpactFeedbackStyle.Light
+                ).catch(() => {});
                 setMode('barcode');
-                setHasScanned(false);
+                resumeScanning();
               }}
             >
               <Text
@@ -340,10 +421,7 @@ export default function ScannerScreen() {
 
         {/* Bottom — Cancel button */}
         <View className="items-center mb-8">
-          <Pressable
-            style={styles.cancelButton}
-            onPress={() => router.back()}
-          >
+          <Pressable style={styles.cancelButton} onPress={() => router.back()}>
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
         </View>
@@ -360,7 +438,7 @@ export default function ScannerScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={StyleSheet.absoluteFillObject}
         >
-          <Animated.View 
+          <Animated.View
             entering={FadeIn.duration(200)}
             exiting={FadeOut.duration(200)}
             style={styles.bottomSheetContainer}
@@ -369,138 +447,173 @@ export default function ScannerScreen() {
               <View style={StyleSheet.absoluteFillObject} />
             </TouchableWithoutFeedback>
 
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            exiting={SlideOutDown.duration(200)}
-            style={styles.bottomSheet}
-          >
-            <View className="w-12 h-1 bg-slate-200 rounded-full mt-4 mb-2 self-center" />
+            <Animated.View
+              entering={SlideInDown.duration(300)}
+              exiting={SlideOutDown.duration(200)}
+              style={styles.bottomSheet}
+            >
+              <View className="w-12 h-1 bg-slate-200 rounded-full mt-4 mb-2 self-center" />
 
-            {isLoading ? (
-              <View className="py-16 items-center justify-center">
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text className="text-slate-500 mt-4 font-['NotoSans_500Medium']">Fetching asset details...</Text>
-              </View>
-            ) : scannedAsset ? (
-              <View className="px-6 pb-6 pt-2">
-                {!showReportForm ? (
-                  <>
-                    <View className="flex-row justify-between items-start">
-                      <View>
-                        <Text className="text-2xl font-['NotoSans_700Bold'] text-slate-900 mb-1">
-                          {scannedAsset.asset.assetTag}
-                        </Text>
-                        <View className="flex-row items-center">
-                          <View 
-                            className="w-2 h-2 rounded-full mr-2" 
-                            style={{ 
-                              backgroundColor: scannedAsset.asset.status.toLowerCase() === 'available' ? '#10b981' : 
-                                               scannedAsset.asset.status.toLowerCase() === 'assigned' ? '#3b82f6' : '#ef4444' 
-                            }} 
-                          />
-                          <Text className="font-['NotoSans_600SemiBold'] text-[15px]"
-                                style={{
-                                  color: scannedAsset.asset.status.toLowerCase() === 'available' ? '#10b981' : 
-                                         scannedAsset.asset.status.toLowerCase() === 'assigned' ? '#3b82f6' : '#ef4444'
-                                }}>
-                            {scannedAsset.asset.status}
+              {isLoading ? (
+                <View className="py-16 items-center justify-center">
+                  <ActivityIndicator size="large" color={Colors.primary} />
+                  <Text className="text-slate-500 mt-4 font-['NotoSans_500Medium']">
+                    Fetching asset details...
+                  </Text>
+                </View>
+              ) : scannedAsset ? (
+                <View className="px-6 pb-6 pt-2">
+                  {!showReportForm ? (
+                    <>
+                      <View className="flex-row justify-between items-start">
+                        <View>
+                          <Text className="text-2xl font-['NotoSans_700Bold'] text-slate-900 mb-1">
+                            {scannedAsset.asset.assetTag}
                           </Text>
+                          <View className="flex-row items-center">
+                            <View
+                              className="w-2 h-2 rounded-full mr-2"
+                              style={{
+                                backgroundColor:
+                                  scannedAsset.asset.status.toLowerCase() ===
+                                  'available'
+                                    ? '#10b981'
+                                    : scannedAsset.asset.status.toLowerCase() ===
+                                        'assigned'
+                                      ? '#3b82f6'
+                                      : '#ef4444',
+                              }}
+                            />
+                            <Text
+                              className="font-['NotoSans_600SemiBold'] text-[15px]"
+                              style={{
+                                color:
+                                  scannedAsset.asset.status.toLowerCase() ===
+                                  'available'
+                                    ? '#10b981'
+                                    : scannedAsset.asset.status.toLowerCase() ===
+                                        'assigned'
+                                      ? '#3b82f6'
+                                      : '#ef4444',
+                              }}
+                            >
+                              {scannedAsset.asset.status}
+                            </Text>
+                          </View>
+                        </View>
+                        <View className="bg-[#e2e8f0]/60 p-3 rounded-xl">
+                          <Laptop size={28} color="#1e293b" />
                         </View>
                       </View>
-                      <View className="bg-[#e2e8f0]/60 p-3 rounded-xl">
-                        <Laptop size={28} color="#1e293b" />
-                      </View>
-                    </View>
 
-                    <Text className="text-slate-500 font-['NotoSans_600SemiBold'] text-base mt-8 mb-4">
-                      Asset Details
-                    </Text>
-
-                    <View className="gap-y-6">
-                      <View className="flex-row items-center">
-                        <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
-                          <Laptop size={20} color="#64748b" />
-                        </View>
-                        <View>
-                          <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Model</Text>
-                          <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.model.name}</Text>
-                        </View>
-                      </View>
-
-                      <View className="flex-row items-center">
-                        <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
-                          <MapPin size={20} color="#64748b" />
-                        </View>
-                        <View>
-                          <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Location</Text>
-                          <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.location?.name || 'Unknown'}</Text>
-                        </View>
-                      </View>
-
-                      <View className="flex-row items-center">
-                        <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
-                          <User size={20} color="#64748b" />
-                        </View>
-                        <View>
-                          <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">Custodian</Text>
-                          <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">{scannedAsset.assignment?.assignedToUser?.name || '-'}</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    <Pressable
-                      className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-8 active:opacity-90"
-                      onPress={() => setShowReportForm(true)}
-                    >
-                      <Text className="text-white text-[16px] font-['NotoSans_700Bold']">Report An Issue</Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <>
-                    <View className="flex-row items-center mb-6">
-                      <Pressable
-                        onPress={() => setShowReportForm(false)}
-                        className="mr-3 p-1"
-                      >
-                        <ChevronLeft size={24} color="#1e293b" />
-                      </Pressable>
-                      <Text className="text-xl font-['NotoSans_700Bold'] text-slate-900">
-                        Report an Issue
+                      <Text className="text-slate-500 font-['NotoSans_600SemiBold'] text-base mt-8 mb-4">
+                        Asset Details
                       </Text>
-                    </View>
 
-                    <Text className="text-slate-500 text-sm font-['NotoSans_500Medium'] mb-2">
-                      {scannedAsset.asset.assetTag} · {scannedAsset.model.name}
-                    </Text>
+                      <View className="gap-y-6">
+                        <View className="flex-row items-center">
+                          <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                            <Laptop size={20} color="#64748b" />
+                          </View>
+                          <View>
+                            <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">
+                              Model
+                            </Text>
+                            <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">
+                              {scannedAsset.model.name}
+                            </Text>
+                          </View>
+                        </View>
 
-                    <TextInput
-                      style={styles.issueTextArea}
-                      multiline
-                      numberOfLines={6}
-                      textAlignVertical="top"
-                      placeholder="Describe any issues, damages or missing parts..."
-                      placeholderTextColor="#94a3b8"
-                      value={issueNote}
-                      onChangeText={setIssueNote}
-                    />
+                        <View className="flex-row items-center">
+                          <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                            <MapPin size={20} color="#64748b" />
+                          </View>
+                          <View>
+                            <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">
+                              Location
+                            </Text>
+                            <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">
+                              {scannedAsset.location?.name || 'Unknown'}
+                            </Text>
+                          </View>
+                        </View>
 
-                    <Pressable
-                      className={`bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-6 active:opacity-90 ${isSubmittingIssue || !issueNote.trim() ? 'opacity-50' : ''}`}
-                      onPress={handleSubmitIssue}
-                      disabled={isSubmittingIssue || !issueNote.trim()}
-                    >
-                      {isSubmittingIssue ? (
-                        <ActivityIndicator color="white" />
-                      ) : (
-                        <Text className="text-white text-[16px] font-['NotoSans_700Bold']">Submit Report</Text>
-                      )}
-                    </Pressable>
-                  </>
-                )}
-              </View>
-            ) : null}
+                        <View className="flex-row items-center">
+                          <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                            <User size={20} color="#64748b" />
+                          </View>
+                          <View>
+                            <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">
+                              Custodian
+                            </Text>
+                            <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">
+                              {scannedAsset.assignment?.assignedToUser?.name ||
+                                '-'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <Pressable
+                        className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-8 active:opacity-90"
+                        onPress={() => setShowReportForm(true)}
+                      >
+                        <Text className="text-white text-[16px] font-['NotoSans_700Bold']">
+                          Report An Issue
+                        </Text>
+                      </Pressable>
+                    </>
+                  ) : (
+                    <>
+                      <View className="flex-row items-center mb-6">
+                        <Pressable
+                          onPress={() => setShowReportForm(false)}
+                          className="mr-3 p-1"
+                        >
+                          <ChevronLeft size={24} color="#1e293b" />
+                        </Pressable>
+                        <Text className="text-xl font-['NotoSans_700Bold'] text-slate-900">
+                          Report an Issue
+                        </Text>
+                      </View>
+
+                      <Text className="text-slate-500 text-sm font-['NotoSans_500Medium'] mb-2">
+                        {scannedAsset.asset.assetTag} ·{' '}
+                        {scannedAsset.model.name}
+                      </Text>
+
+                      <TextInput
+                        style={styles.issueTextArea}
+                        multiline
+                        numberOfLines={6}
+                        maxLength={1000}
+                        textAlignVertical="top"
+                        placeholder="Describe any issues, damages or missing parts..."
+                        placeholderTextColor="#94a3b8"
+                        value={issueNote}
+                        onChangeText={setIssueNote}
+                      />
+
+                      <Pressable
+                        className={`bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-6 active:opacity-90 ${isSubmittingIssue || !issueNote.trim() ? 'opacity-50' : ''}`}
+                        onPress={handleSubmitIssue}
+                        disabled={isSubmittingIssue || !issueNote.trim()}
+                      >
+                        {isSubmittingIssue ? (
+                          <ActivityIndicator color="white" />
+                        ) : (
+                          <Text className="text-white text-[16px] font-['NotoSans_700Bold']">
+                            Submit Report
+                          </Text>
+                        )}
+                      </Pressable>
+                    </>
+                  )}
+                </View>
+              ) : null}
+            </Animated.View>
           </Animated.View>
-        </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
     </View>

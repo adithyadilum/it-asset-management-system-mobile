@@ -1,6 +1,12 @@
+import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
+import { getApiUrl } from '../../constants/api';
+import { notificationDestination } from '../../lib/notification-navigation';
+import { StateMessage } from '../../components/ui/StateMessage';
 import { logger } from '../../lib/logger';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -10,7 +16,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  Layout,
+} from 'react-native-reanimated';
 import {
   Bell,
   ArrowUpDown,
@@ -43,7 +53,10 @@ function formatTimeAgo(dateString: string) {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
   } catch {
     return '';
   }
@@ -85,10 +98,14 @@ const getEventTypeConfig = (eventType: string): EventTypeConfig => {
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const {
     notifications,
     unreadCount,
     isLoading,
+    error,
+    hasMore,
+    loadMore,
     loadNotifications,
     markAsRead,
     markAllAsRead,
@@ -96,7 +113,9 @@ export default function NotificationsScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [sortVisible, setSortVisible] = useState(false);
-  const [activeSort, setActiveSort] = useState<'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'>('date-desc');
+  const [activeSort, setActiveSort] = useState<
+    'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'
+  >('date-desc');
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -120,10 +139,26 @@ export default function NotificationsScreen() {
     await markAllAsRead();
   };
 
-  const handleNotificationPress = async (id: string, isRead: boolean) => {
+  const handleNotificationPress = async (
+    id: string,
+    isRead: boolean,
+    targetUrl: string | null
+  ) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!isRead) {
       await markAsRead(id);
+    }
+    const destination = notificationDestination(getApiUrl(), targetUrl);
+    if (destination?.kind === 'native') router.push(destination.path);
+    else if (destination?.kind === 'web') {
+      try {
+        await Linking.openURL(destination.url);
+      } catch {
+        Alert.alert(
+          'Unable to open alert',
+          'Try opening this alert from the desktop.'
+        );
+      }
     }
   };
 
@@ -144,14 +179,20 @@ export default function NotificationsScreen() {
     return 0;
   });
 
-  const renderItem = ({ item, index }: { item: typeof notifications[0]; index: number }) => {
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: (typeof notifications)[0];
+    index: number;
+  }) => {
     const config = getEventTypeConfig(item.eventType);
     const IconComponent = config.icon;
 
     return (
       <Animated.View
         layout={Layout.springify()}
-        entering={FadeInDown.delay(index * 20).duration(350)}
+        entering={FadeInDown.delay(Math.min(index, 10) * 20).duration(350)}
         style={styles.cardWrapper}
       >
         <View
@@ -161,14 +202,18 @@ export default function NotificationsScreen() {
           ]}
         >
           <Pressable
-            onPress={() => handleNotificationPress(item.id, item.isRead)}
+            onPress={() =>
+              handleNotificationPress(item.id, item.isRead, item.targetUrl)
+            }
             style={styles.cardContent}
           >
             {/* Left status bar accent */}
             {!item.isRead && <View style={styles.unreadIndicatorBar} />}
 
             {/* Event Type Icon */}
-            <View style={[styles.iconContainer, { backgroundColor: config.bg }]}>
+            <View
+              style={[styles.iconContainer, { backgroundColor: config.bg }]}
+            >
               <IconComponent size={18} color={config.color} strokeWidth={2} />
             </View>
 
@@ -184,7 +229,9 @@ export default function NotificationsScreen() {
                 >
                   {item.title}
                 </Text>
-                <Text style={styles.timeText}>{formatTimeAgo(item.createdAt)}</Text>
+                <Text style={styles.timeText}>
+                  {formatTimeAgo(item.createdAt)}
+                </Text>
               </View>
               <Text
                 style={[
@@ -209,7 +256,9 @@ export default function NotificationsScreen() {
         <View>
           <Text className="text-2xl font-sansBold text-foreground">Alerts</Text>
           {unreadCount > 0 && (
-            <Text style={styles.headerSubtitle}>{unreadCount} unread notifications</Text>
+            <Text style={styles.headerSubtitle}>
+              {unreadCount} unread notifications
+            </Text>
           )}
         </View>
 
@@ -217,7 +266,10 @@ export default function NotificationsScreen() {
           {unreadCount > 0 && (
             <Pressable
               onPress={handleMarkAllAsRead}
-              style={({ pressed }) => [styles.headerButton, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [
+                styles.headerButton,
+                pressed && { opacity: 0.6 },
+              ]}
               accessibilityLabel="Mark all as read"
             >
               <CheckCheck size={20} color={Colors.primary} />
@@ -233,11 +285,14 @@ export default function NotificationsScreen() {
               style={({ pressed }) => [
                 styles.headerButton,
                 sortVisible && styles.headerButtonActive,
-                pressed && { opacity: 0.6 }
+                pressed && { opacity: 0.6 },
               ]}
               accessibilityLabel="Sort notifications"
             >
-              <ArrowUpDown size={20} color={sortVisible ? Colors.primary : Colors.foreground} />
+              <ArrowUpDown
+                size={20}
+                color={sortVisible ? Colors.primary : Colors.foreground}
+              />
             </Pressable>
           )}
         </View>
@@ -257,10 +312,17 @@ export default function NotificationsScreen() {
               setSortVisible(false);
             }}
           >
-            <Text style={[styles.sortOptionText, activeSort === 'date-desc' && styles.sortOptionTextActive]}>
+            <Text
+              style={[
+                styles.sortOptionText,
+                activeSort === 'date-desc' && styles.sortOptionTextActive,
+              ]}
+            >
               Newest First (Date)
             </Text>
-            {activeSort === 'date-desc' && <Check size={14} color={Colors.primary} />}
+            {activeSort === 'date-desc' && (
+              <Check size={14} color={Colors.primary} />
+            )}
           </Pressable>
 
           <Pressable
@@ -271,10 +333,17 @@ export default function NotificationsScreen() {
               setSortVisible(false);
             }}
           >
-            <Text style={[styles.sortOptionText, activeSort === 'date-asc' && styles.sortOptionTextActive]}>
+            <Text
+              style={[
+                styles.sortOptionText,
+                activeSort === 'date-asc' && styles.sortOptionTextActive,
+              ]}
+            >
               Oldest First (Date)
             </Text>
-            {activeSort === 'date-asc' && <Check size={14} color={Colors.primary} />}
+            {activeSort === 'date-asc' && (
+              <Check size={14} color={Colors.primary} />
+            )}
           </Pressable>
 
           <Pressable
@@ -285,10 +354,17 @@ export default function NotificationsScreen() {
               setSortVisible(false);
             }}
           >
-            <Text style={[styles.sortOptionText, activeSort === 'name-asc' && styles.sortOptionTextActive]}>
+            <Text
+              style={[
+                styles.sortOptionText,
+                activeSort === 'name-asc' && styles.sortOptionTextActive,
+              ]}
+            >
               Alphabetical (A to Z)
             </Text>
-            {activeSort === 'name-asc' && <Check size={14} color={Colors.primary} />}
+            {activeSort === 'name-asc' && (
+              <Check size={14} color={Colors.primary} />
+            )}
           </Pressable>
 
           <Pressable
@@ -299,14 +375,33 @@ export default function NotificationsScreen() {
               setSortVisible(false);
             }}
           >
-            <Text style={[styles.sortOptionText, activeSort === 'name-desc' && styles.sortOptionTextActive]}>
+            <Text
+              style={[
+                styles.sortOptionText,
+                activeSort === 'name-desc' && styles.sortOptionTextActive,
+              ]}
+            >
               Alphabetical (Z to A)
             </Text>
-            {activeSort === 'name-desc' && <Check size={14} color={Colors.primary} />}
+            {activeSort === 'name-desc' && (
+              <Check size={14} color={Colors.primary} />
+            )}
           </Pressable>
         </Animated.View>
       )}
 
+      {error ? (
+        <StateMessage
+          type="error"
+          message={error}
+          onRetry={() => void loadNotifications(30, 0)}
+        />
+      ) : null}
+      {activeSort !== 'date-desc' && hasMore ? (
+        <Text style={{ paddingHorizontal: 20, color: Colors.mutedForeground }}>
+          Sorting loaded alerts. Load older alerts to include them.
+        </Text>
+      ) : null}
       {/* Main Content List */}
       {isLoading && notifications.length === 0 ? (
         <View className="flex-1 items-center justify-center">
@@ -317,30 +412,65 @@ export default function NotificationsScreen() {
           data={[]}
           renderItem={null}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
           }
           contentContainerStyle={styles.emptyContainer}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconCircle}>
-                <Bell size={32} color={Colors.tabInactive} strokeWidth={1.5} />
+            error ? null : (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconCircle}>
+                  <Bell
+                    size={32}
+                    color={Colors.tabInactive}
+                    strokeWidth={1.5}
+                  />
+                </View>
+                <Text className="text-lg font-sansBold text-foreground mt-4">
+                  All quiet for now
+                </Text>
+                <Text className="text-sm font-sans text-muted-foreground text-center mt-1 px-8">
+                  You&apos;re completely up to date! Updates on asset approvals
+                  or system alerts will appear here.
+                </Text>
               </View>
-              <Text className="text-lg font-sansBold text-foreground mt-4">All quiet for now</Text>
-              <Text className="text-sm font-sans text-muted-foreground text-center mt-1 px-8">
-                You&apos;re completely up to date! Updates on asset approvals or system alerts will appear here.
-              </Text>
-            </View>
+            )
           }
         />
       ) : (
         <FlatList
+          onEndReached={() => {
+            if (!error) void loadMore();
+          }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isLoading ? (
+              <ActivityIndicator color={Colors.primary} />
+            ) : hasMore ? (
+              <Pressable
+                onPress={() => void loadMore()}
+                style={{ padding: 16 }}
+              >
+                <Text style={{ textAlign: 'center', color: Colors.primary }}>
+                  Load older alerts
+                </Text>
+              </Pressable>
+            ) : null
+          }
           data={sortedNotifications}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
           }
         />
       )}

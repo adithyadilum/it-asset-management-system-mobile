@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, ScrollView, RefreshControl } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { StateMessage } from '../../components/ui/StateMessage';
 import { Header } from '../../components/dashboard/Header';
 import { ScannerCard } from '../../components/dashboard/ScannerCard';
 import { KPICard } from '../../components/dashboard/KPICard';
@@ -16,8 +17,8 @@ import { useDashboardStats } from '../../hooks/useDashboardStats';
 export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  
-  const { metrics, loadStats } = useDashboardStats();
+
+  const { metrics, loadStats, loading, error } = useDashboardStats();
 
   React.useEffect(() => {
     loadStats();
@@ -28,7 +29,7 @@ export default function DashboardScreen() {
     // Bumping refreshKey causes ActivityList to remount and re-fetch
     setRefreshKey((k) => k + 1);
     loadStats().finally(() => {
-      setTimeout(() => setRefreshing(false), 1500);
+      setRefreshing(false);
     });
   }, [loadStats]);
 
@@ -62,12 +63,20 @@ export default function DashboardScreen() {
           entering={FadeInDown.delay(200).duration(500).springify()}
           className="mt-5"
         >
+          {error ? (
+            <StateMessage type="error" message={error} onRetry={loadStats} />
+          ) : null}
+          {loading && metrics.every((m) => m.value === null) ? (
+            <StateMessage type="loading" message="Loading metrics..." />
+          ) : null}
           <View className="gap-3">
             <View className="flex-row gap-3">
               {metrics.slice(0, 2).map((metric, index) => (
                 <Animated.View
                   key={metric.label}
-                  entering={FadeInDown.delay(200 + index * 50).duration(500).springify()}
+                  entering={FadeInDown.delay(200 + index * 50)
+                    .duration(500)
+                    .springify()}
                   style={{ flex: 1 }}
                 >
                   <KPICard metric={metric} />
@@ -78,7 +87,9 @@ export default function DashboardScreen() {
               {metrics.slice(2, 4).map((metric, index) => (
                 <Animated.View
                   key={metric.label}
-                  entering={FadeInDown.delay(300 + index * 50).duration(500).springify()}
+                  entering={FadeInDown.delay(300 + index * 50)
+                    .duration(500)
+                    .springify()}
                   style={{ flex: 1 }}
                 >
                   <KPICard metric={metric} />

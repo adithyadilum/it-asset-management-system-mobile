@@ -139,7 +139,9 @@ describe('fetchApi', () => {
     setUnauthenticatedHandler(onUnauthenticated);
     global.fetch = jest
       .fn()
-      .mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, { status: 401 }));
+      .mockResolvedValue(
+        jsonResponse({ error: 'Unauthorized' }, { status: 401 })
+      );
 
     await expect(fetchApi('/api/v1/thing')).rejects.toBeInstanceOf(
       SessionExpiredError
@@ -151,12 +153,14 @@ describe('fetchApi', () => {
   it('reports the retry delay from the reset header on 429', async () => {
     // M-06: the scanner uses this to pause rather than stack modal alerts.
     const resetAt = Math.floor(Date.now() / 1000) + 20;
-    global.fetch = jest.fn().mockResolvedValue(
-      jsonResponse(
-        { error: 'Rate limit exceeded' },
-        { status: 429, headers: { 'X-RateLimit-Reset': String(resetAt) } }
-      )
-    );
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(
+          { error: 'Rate limit exceeded' },
+          { status: 429, headers: { 'X-RateLimit-Reset': String(resetAt) } }
+        )
+      );
 
     await expect(fetchApi('/api/v1/scan')).rejects.toBeInstanceOf(
       RateLimitError
@@ -238,4 +242,52 @@ describe('fetchApi', () => {
 
     jest.useRealTimers();
   });
+});
+
+it('redirects a missing-token request to pairing', async () => {
+  mockSecureStore.getItemAsync.mockResolvedValueOnce(null);
+  const handler = jest.fn();
+  setUnauthenticatedHandler(handler);
+  await expect(fetchApi('/api/v1/assets/my-assets')).rejects.toBeInstanceOf(
+    SessionExpiredError
+  );
+  expect(handler).toHaveBeenCalledTimes(1);
+});
+it('normalizes the API base and rejects non-HTTP protocols', () => {
+  process.env.EXPO_PUBLIC_API_URL = 'https://assets.example.com///';
+  expect(getApiUrl()).toBe('https://assets.example.com');
+  process.env.EXPO_PUBLIC_API_URL = 'file:///tmp';
+  expect(() => getApiUrl()).toThrow('HTTP or HTTPS');
+});
+
+it('does not clear a newer pairing when an old request receives 401', async () => {
+  mockSecureStore.getItemAsync
+    .mockResolvedValueOnce('old-pairing')
+    .mockResolvedValueOnce('new-pairing');
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce(jsonResponse({ error: 'Revoked' }, { status: 401 }));
+  const handler = jest.fn();
+  setUnauthenticatedHandler(handler);
+  await expect(fetchApi('/api/v1/profile')).rejects.toBeInstanceOf(
+    SessionExpiredError
+  );
+  expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  expect(handler).not.toHaveBeenCalled();
+});
+it('does not clear local credentials for a background unlink failure', async () => {
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce(jsonResponse({ error: 'Revoked' }, { status: 401 }));
+  const handler = jest.fn();
+  setUnauthenticatedHandler(handler);
+  await expect(
+    fetchApi('/api/v1/auth/unlink-me', {
+      method: 'POST',
+      requiresAuth: false,
+      headers: { Authorization: 'Bearer previous-pairing' },
+    })
+  ).rejects.toBeInstanceOf(SessionExpiredError);
+  expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  expect(handler).not.toHaveBeenCalled();
 });

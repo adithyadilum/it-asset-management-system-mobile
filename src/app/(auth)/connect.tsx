@@ -1,14 +1,26 @@
 import { toMessage } from '../../lib/errors';
 import { logger } from '../../lib/logger';
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Image, ScrollView, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+} from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { setStoredToken } from '../../constants/api';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { QrCode, Smartphone, Laptop, HelpCircle, X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useAuth } from '../../context/auth-context';
 import { Button } from '../../components/ui/Button';
 import { Colors } from '../../constants/colors';
@@ -42,8 +54,16 @@ export default function ConnectScreen() {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           'Access Denied',
-          'This app is restricted to Global Administrators. Your account does not have the required permissions.',
-          [{ text: 'OK', onPress: () => { setIsScanning(false); setIsLoading(false); } }]
+          'This app is available to Global Administrators and IT Operators. Your account does not have the required permissions.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setIsScanning(false);
+                setIsLoading(false);
+              },
+            },
+          ]
         );
         return;
       }
@@ -56,14 +76,19 @@ export default function ConnectScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Pairing Failed',
-        toMessage(error, 'The QR code was invalid or expired. Please try again.'),
-        [{
-          text: 'OK',
-          onPress: () => {
-            setIsScanning(false);
-            setIsLoading(false);
-          }
-        }]
+        toMessage(
+          error,
+          'The QR code was invalid or expired. Please try again.'
+        ),
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setIsScanning(false);
+              setIsLoading(false);
+            },
+          },
+        ]
       );
     }
   };
@@ -72,7 +97,10 @@ export default function ConnectScreen() {
     if (!permission?.granted) {
       const result = await requestPermission();
       if (!result.granted) {
-        Alert.alert('Permission Required', 'Camera permission is needed to scan the QR code.');
+        Alert.alert(
+          'Permission Required',
+          'Camera permission is needed to scan the QR code.'
+        );
         return;
       }
     }
@@ -100,10 +128,7 @@ export default function ConnectScreen() {
         <View style={styles.scannerOverlay}>
           {/* Top Mask */}
           <View
-            style={[
-              styles.topMask,
-              { paddingTop: Math.max(insets.top, 24) }
-            ]}
+            style={[styles.topMask, { paddingTop: Math.max(insets.top, 24) }]}
           >
             <Animated.View
               entering={FadeIn.duration(400)}
@@ -112,11 +137,10 @@ export default function ConnectScreen() {
               <View style={styles.qrIconBadge}>
                 <QrCode size={24} color="#FFFFFF" />
               </View>
-              <Text style={styles.scanTitle}>
-                Scan Pairing QR Code
-              </Text>
+              <Text style={styles.scanTitle}>Scan Pairing QR Code</Text>
               <Text style={styles.scanSubtitle}>
-                Align the QR code from the IT Web Portal{'\n'}within the viewfinder window.
+                Align the QR code from the IT Web Portal{'\n'}within the
+                viewfinder window.
               </Text>
             </Animated.View>
           </View>
@@ -124,7 +148,12 @@ export default function ConnectScreen() {
           {/* Middle Row (Left Mask + Clear Viewfinder + Right Mask) */}
           <View style={[styles.middleRow, { height: SCANNER_SIZE }]}>
             <View style={styles.sideMask} />
-            <View style={[styles.viewfinderArea, { width: SCANNER_SIZE, height: SCANNER_SIZE }]}>
+            <View
+              style={[
+                styles.viewfinderArea,
+                { width: SCANNER_SIZE, height: SCANNER_SIZE },
+              ]}
+            >
               <ScannerReticle reticleSize={SCANNER_SIZE} />
             </View>
             <View style={styles.sideMask} />
@@ -134,7 +163,7 @@ export default function ConnectScreen() {
           <View
             style={[
               styles.bottomMask,
-              { paddingTop: 30, paddingBottom: Math.max(insets.bottom, 24) }
+              { paddingTop: 30, paddingBottom: Math.max(insets.bottom, 24) },
             ]}
           >
             {isLoading ? (
@@ -142,7 +171,10 @@ export default function ConnectScreen() {
                 entering={FadeIn.duration(300)}
                 style={styles.verifyingContainer}
               >
-                <ActivityIndicator color="#ffffff" style={styles.verifyingIcon} />
+                <ActivityIndicator
+                  color="#ffffff"
+                  style={styles.verifyingIcon}
+                />
                 <Text style={styles.verifyingText}>Verifying...</Text>
               </Animated.View>
             ) : (
@@ -150,11 +182,17 @@ export default function ConnectScreen() {
                 <Pressable
                   style={({ pressed }) => [
                     styles.cancelButton,
-                    pressed && { opacity: 0.8 }
+                    pressed && { opacity: 0.8 },
                   ]}
                   onPress={stopScanning}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <X size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
                     <Text style={styles.cancelButtonText}>Cancel</Text>
                   </View>
@@ -199,21 +237,22 @@ export default function ConnectScreen() {
             <View style={styles.smartphoneIconBadge}>
               <Smartphone size={32} color={Colors.primary} />
             </View>
-            <Text style={styles.welcomeTitle}>
-              Link Admin Account
-            </Text>
+            <Text style={styles.welcomeTitle}>Link Admin Account</Text>
             <Text style={styles.welcomeSubtitle}>
-              Pair this mobile device with your Web Portal to begin managing assets.
+              Pair this mobile device with your Web Portal to begin managing
+              assets.
             </Text>
           </View>
 
           {/* Setup Instructions Callout */}
           <View style={styles.instructionsCallout}>
             <View style={styles.instructionsHeader}>
-              <Laptop size={16} color={Colors.mutedForeground} style={{ marginRight: 8 }} />
-              <Text style={styles.instructionsTitle}>
-                Setup Instructions
-              </Text>
+              <Laptop
+                size={16}
+                color={Colors.mutedForeground}
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.instructionsTitle}>Setup Instructions</Text>
             </View>
 
             <View style={styles.stepRow}>
@@ -230,7 +269,8 @@ export default function ConnectScreen() {
                 <Text style={styles.stepNumberText}>2</Text>
               </View>
               <Text style={styles.stepText}>
-                Navigate to Settings &gt; Profile, and find the <Text style={styles.stepTextBold}>Link Device</Text> section.
+                Navigate to Settings &gt; Profile, and find the{' '}
+                <Text style={styles.stepTextBold}>Link Device</Text> section.
               </Text>
             </View>
 
@@ -239,7 +279,8 @@ export default function ConnectScreen() {
                 <Text style={styles.stepNumberText}>3</Text>
               </View>
               <Text style={styles.stepText}>
-                Tap <Text style={styles.stepTextBold}>Scan QR Code</Text> below and aim your camera at the screen.
+                Tap <Text style={styles.stepTextBold}>Scan QR Code</Text> below
+                and aim your camera at the screen.
               </Text>
             </View>
           </View>
@@ -262,12 +303,22 @@ export default function ConnectScreen() {
           style={styles.footerContainer}
         >
           <Pressable
-            onPress={() => Alert.alert('Help & Support', 'For questions or troubleshooting, contact the IT service desk at support@tiqri.com or ext 4400.')}
+            onPress={() =>
+              Alert.alert(
+                'Help & Support',
+                'For questions or troubleshooting, contact the IT service desk at support@tiqri.com or ext 4400.'
+              )
+            }
             style={styles.footerPressable}
           >
-            <HelpCircle size={16} color={Colors.mutedForeground} style={{ marginRight: 6 }} />
+            <HelpCircle
+              size={16}
+              color={Colors.mutedForeground}
+              style={{ marginRight: 6 }}
+            />
             <Text style={styles.footerText}>
-              Need help? <Text style={styles.footerTextBold}>Contact IT Support</Text>
+              Need help?{' '}
+              <Text style={styles.footerTextBold}>Contact IT Support</Text>
             </Text>
           </Pressable>
         </Animated.View>

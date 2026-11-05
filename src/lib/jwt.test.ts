@@ -37,6 +37,10 @@ describe('isTokenUsable', () => {
     expect(isTokenUsable({ role: 'GlobalAdmin', exp: inDays(30) })).toBe(true);
   });
 
+  it('accepts a valid IT operator session', () => {
+    expect(isTokenUsable({ role: 'ITOperator', exp: inDays(30) })).toBe(true);
+  });
+
   it('rejects an expired token', () => {
     // M-03: the guard previously checked only the role, so a 31-day-old token
     // kept the app on the dashboard while every request returned 401.
@@ -57,7 +61,9 @@ describe('isTokenUsable', () => {
 
   it('rejects a non-admin role', () => {
     expect(isTokenUsable({ role: 'Employee', exp: inDays(30) })).toBe(false);
-    expect(isTokenUsable({ role: 'ITOperator', exp: inDays(30) })).toBe(false);
+    expect(isTokenUsable({ role: 'FinancialAuditor', exp: inDays(30) })).toBe(
+      false
+    );
   });
 
   it('rejects a null payload', () => {

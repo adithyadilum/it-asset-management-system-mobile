@@ -1,5 +1,5 @@
 import { toMessage } from '../../lib/errors';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   StyleSheet,
-  Pressable,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Package, AlertCircle } from 'lucide-react-native';
@@ -26,9 +26,21 @@ import { AssetDetailsSheet } from '../../components/dashboard/assets/AssetDetail
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 
-const AnimatedAssetRow = React.memo(function AnimatedAssetRow({ asset, index, onPress }: { asset: AssetEntry, index: number, onPress: (asset: AssetEntry) => void }) {
+const AnimatedAssetRow = React.memo(function AnimatedAssetRow({
+  asset,
+  index,
+  onPress,
+}: {
+  asset: AssetEntry;
+  index: number;
+  onPress: (asset: AssetEntry) => void;
+}) {
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(400).springify()}>
+    <Animated.View
+      entering={FadeInDown.delay(index * 60)
+        .duration(400)
+        .springify()}
+    >
       <AssetRow asset={asset} onPress={() => onPress(asset)} />
     </Animated.View>
   );
@@ -98,9 +110,11 @@ export default function MyAssetsScreen() {
     }
   }, [loadData]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
   // ── Sheet handlers ─────────────────────────────────────────────────────────
 
@@ -158,11 +172,15 @@ export default function MyAssetsScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-
       {/* ── Section Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Package size={16} color={Colors.foreground} strokeWidth={2} style={{ marginRight: 6 }} />
+          <Package
+            size={16}
+            color={Colors.foreground}
+            strokeWidth={2}
+            style={{ marginRight: 6 }}
+          />
           <Text style={styles.headerTitle}>My Assets</Text>
         </View>
       </View>
@@ -171,7 +189,10 @@ export default function MyAssetsScreen() {
 
       {/* ── Loading State ── */}
       {loading && (
-        <Animated.View entering={FadeIn.duration(300)} style={styles.centeredState}>
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          style={styles.centeredState}
+        >
           <ActivityIndicator size="small" color={Colors.primary} />
           <Text style={styles.stateText}>Loading your assets…</Text>
         </Animated.View>
@@ -179,11 +200,18 @@ export default function MyAssetsScreen() {
 
       {/* ── Error State ── */}
       {!loading && error && (
-        <Animated.View entering={FadeIn.duration(300)} style={styles.centeredState}>
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          style={styles.centeredState}
+        >
           <Card variant="outlined" style={styles.errorCard}>
             <View style={styles.errorIconRow}>
               <View style={styles.errorIconCircle}>
-                <AlertCircle size={28} color={Colors.destructive} strokeWidth={1.75} />
+                <AlertCircle
+                  size={28}
+                  color={Colors.destructive}
+                  strokeWidth={1.75}
+                />
               </View>
             </View>
             <Text style={styles.errorTitle}>Couldn&apos;t Load Assets</Text>
@@ -219,7 +247,10 @@ export default function MyAssetsScreen() {
           }
         >
           {hasNoAssets ? (
-            <Animated.View entering={FadeIn.duration(400)} style={styles.centeredState}>
+            <Animated.View
+              entering={FadeIn.duration(400)}
+              style={styles.centeredState}
+            >
               <View style={styles.emptyIconCircle}>
                 <Package size={36} color={Colors.info} strokeWidth={1.75} />
               </View>
@@ -269,6 +300,9 @@ export default function MyAssetsScreen() {
         visible={detailsVisible}
         asset={selectedAsset}
         onClose={closeDetails}
+        onIssueReported={() => {
+          void load();
+        }}
       />
     </View>
   );

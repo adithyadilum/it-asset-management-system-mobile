@@ -12,11 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  X,
-  AlertTriangle,
-  Check,
-} from 'lucide-react-native';
+import { X, AlertTriangle, Check } from 'lucide-react-native';
 import { Colors } from '../../../constants/colors';
 import { getAssetPresentation } from './AssetRow';
 import type { PendingAssignment } from '../../../services/assets';
@@ -67,7 +63,7 @@ export function AcknowledgmentSheet({
       setConfirmError(null);
       setConfirming(false);
     }
-  }, [visible, assignment?.assignmentId]);
+  }, [visible, assignment]);
 
   useEffect(() => {
     if (visible) {
@@ -98,7 +94,7 @@ export function AcknowledgmentSheet({
         }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, slideAnim, backdropAnim]);
 
   const handleConfirm = async () => {
     if (!assignment || !acknowledged || confirming) return;
@@ -114,7 +110,10 @@ export function AcknowledgmentSheet({
     }
   };
 
-  const presentation = getAssetPresentation(assignment?.pillar, assignment?.name ?? '');
+  const presentation = getAssetPresentation(
+    assignment?.pillar,
+    assignment?.name ?? ''
+  );
   const IconComponent = presentation.icon;
 
   return (
@@ -162,7 +161,11 @@ export function AcknowledgmentSheet({
 
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8, gap: 14 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: 8,
+            gap: 14,
+          }}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
@@ -171,7 +174,10 @@ export function AcknowledgmentSheet({
             {/* Icon and Name */}
             <View className="flex-row items-center gap-3.5 mb-4">
               <IconComponent size={32} color="#0A1A8A" strokeWidth={1.5} />
-              <Text className="text-[19px] font-sansBold text-slate-900 flex-1" numberOfLines={1}>
+              <Text
+                className="text-[19px] font-sansBold text-slate-900 flex-1"
+                numberOfLines={1}
+              >
                 {assignment?.name ?? '—'}
               </Text>
             </View>
@@ -179,27 +185,45 @@ export function AcknowledgmentSheet({
             {/* Key-Value details */}
             <View className="gap-2.5">
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Asset ID:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{assignment?.tagId ?? '—'}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Asset ID:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {assignment?.tagId ?? '—'}
+                </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Condition:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{assignment?.condition ?? 'Unknown'}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Condition:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {assignment?.condition ?? 'Unknown'}
+                </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Assigned By:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{assignment?.assignedByName ?? '—'}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Assigned By:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {assignment?.assignedByName ?? '—'}
+                </Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">Date:</Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">{formatDate(assignment?.assignedDate)}</Text>
+                <Text className="w-28 text-sm font-sans text-slate-500">
+                  Date:
+                </Text>
+                <Text className="flex-1 text-sm font-sans text-slate-800">
+                  {formatDate(assignment?.assignedDate)}
+                </Text>
               </View>
             </View>
           </View>
 
           {/* ── Policy disclaimer ── */}
           <Text className="text-sm font-sans text-slate-500 leading-relaxed mt-1">
-            By accepting this equipment, you acknowledge that you have received it in the condition stated above and agree to abide by the TIQRI IT Acceptable Use Policy.
+            By accepting this equipment, you acknowledge that you have received
+            it in the condition stated above and agree to abide by the TIQRI IT
+            Acceptable Use Policy.
           </Text>
 
           {/* ── Acknowledgment checkbox ── */}
@@ -217,7 +241,9 @@ export function AcknowledgmentSheet({
                   : 'border-slate-300 bg-white'
               }`}
             >
-              {acknowledged && <Check size={12} color="#FFFFFF" strokeWidth={3.5} />}
+              {acknowledged && (
+                <Check size={12} color="#FFFFFF" strokeWidth={3.5} />
+              )}
             </View>
             <Text className="flex-1 text-[13px] font-sansBold text-slate-800 leading-5">
               I acknowledge and accept responsibility for this asset.
@@ -227,7 +253,11 @@ export function AcknowledgmentSheet({
           {/* ── Error message ── */}
           {confirmError && (
             <View className="flex-row items-center gap-1.5 bg-destructive/10 rounded-lg px-3 py-2.5 mt-1">
-              <AlertTriangle size={13} color={Colors.destructive} strokeWidth={2} />
+              <AlertTriangle
+                size={13}
+                color={Colors.destructive}
+                strokeWidth={2}
+              />
               <Text className="flex-1 text-xs text-destructive leading-[17px]">
                 {confirmError}
               </Text>
@@ -254,11 +284,15 @@ export function AcknowledgmentSheet({
                 acknowledged && !confirming ? 'bg-[#707FA5]' : 'bg-[#707FA5]/40'
               }`}
               disabled={!acknowledged || confirming}
-              style={({ pressed }) => pressed && acknowledged && !confirming && { opacity: 0.8 }}
+              style={({ pressed }) =>
+                pressed && acknowledged && !confirming && { opacity: 0.8 }
+              }
               onPress={handleConfirm}
             >
               <View className="flex-row items-center justify-center gap-1.5">
-                {confirming && <ActivityIndicator size="small" color="#FFFFFF" />}
+                {confirming && (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                )}
                 <Text className="text-white text-sm font-sansBold text-center">
                   {confirming ? 'Confirming…' : 'Confirm Receipt'}
                 </Text>
