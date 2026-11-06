@@ -5,7 +5,8 @@ import {
   StyleSheet,
   View,
   type PressableProps,
-  Platform,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -23,7 +24,7 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   icon?: React.ReactNode;
   children: string;
   /** Extra style overrides for the outer wrapper View */
-  style?: object;
+  style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -56,21 +57,18 @@ export function Button({
 
   return (
     <View style={style}>
-      <Animated.View style={animatedStyle}>
+      <Animated.View style={[{ alignSelf: 'stretch' }, animatedStyle]}>
         <Pressable
           style={[
             styles.base,
             variantStyles[variant],
             sizeStyles[size],
             disabled ? styles.disabled : null,
-            ...Platform.select({
-              ios: [shadow.ios],
-              android: [shadow.android],
-              default: [],
-            }),
           ]}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: Boolean(disabled) }}
           disabled={disabled}
           {...props}
         >
@@ -96,6 +94,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
+    minHeight: 44,
   },
   disabled: {
     opacity: 0.5,
@@ -113,9 +112,9 @@ const variantStyles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -150,16 +149,4 @@ const sizeTextStyles = StyleSheet.create({
   sm: { fontSize: 13 },
   md: { fontSize: 15 },
   lg: { fontSize: 18 },
-});
-
-const shadow = StyleSheet.create({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  android: {
-    elevation: 2,
-  },
 });

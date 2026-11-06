@@ -39,11 +39,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#F3F4F6', // very subtle gray-100 border
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2, // Android shadow
   },
   iconCircle: {
     width: 38,

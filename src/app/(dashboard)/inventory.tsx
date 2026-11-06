@@ -150,7 +150,7 @@ export default function InventoryScreen() {
               <Text style={styles.results}>
                 {result.meta.total.toLocaleString()}{' '}
                 {result.meta.total === 1 ? 'asset' : 'assets'}
-                {search ? ` matching ?${search}?` : ''}
+                {search ? ` matching "${search}"` : ''}
               </Text>
             ) : null
           }
@@ -203,15 +203,22 @@ export default function InventoryScreen() {
               ]}
             >
               <AssetImage uri={item.imageUrl} />
-              <View style={{ flex: 1, gap: 5 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
                 <View
                   style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
                     gap: 6,
                   }}
                 >
-                  <Text style={styles.tag}>{item.assetTag}</Text>
+                  <Text
+                    style={[styles.tag, { flexShrink: 1 }]}
+                    numberOfLines={1}
+                  >
+                    {item.assetTag}
+                  </Text>
                   <AssetStatus status={item.status} />
                 </View>
                 <Text style={styles.assetName} numberOfLines={1}>
@@ -219,7 +226,7 @@ export default function InventoryScreen() {
                 </Text>
                 <Text style={styles.meta} numberOfLines={1}>
                   {item.category}
-                  {item.assignedTo ? ` ? ${item.assignedTo}` : ''}
+                  {item.assignedTo ? ` \u00b7 ${item.assignedTo}` : ''}
                 </Text>
                 {item.location ? (
                   <View

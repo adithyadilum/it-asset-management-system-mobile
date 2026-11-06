@@ -54,6 +54,7 @@ export function InventoryFiltersSheet({
                 alignItems: 'center',
                 gap: 5,
                 paddingVertical: 10,
+                minHeight: 44,
                 paddingHorizontal: 12,
                 borderRadius: 10,
                 borderWidth: 1,
@@ -127,6 +128,12 @@ export function InventoryFiltersSheet({
             </Text>
             <Pressable
               onPress={onClose}
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
               accessibilityLabel="Close filters"
               hitSlop={12}
             >

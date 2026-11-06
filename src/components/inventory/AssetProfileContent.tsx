@@ -78,7 +78,9 @@ export function AssetProfileContent({
         <Text style={styles.tag}>{asset.assetTag}</Text>
         <Text style={styles.title}>{asset.name || model.name}</Text>
         <Text style={styles.subtitle}>
-          {model.brand.name} ? {model.category.name}
+          {model.brand.name}
+          {' \u00b7 '}
+          {model.category.name}
         </Text>
         <AssetStatus status={asset.status} />
         <View style={styles.context}>
@@ -221,11 +223,14 @@ export function AssetProfileContent({
                     <Wrench size={16} color={Colors.status.repair} />
                     <View style={{ flex: 1, gap: 4 }}>
                       <Text style={styles.eventTitle}>
-                        Ticket #{ticket.id} ? {ticket.status.toLowerCase()}
+                        Ticket #{ticket.id}
+                        {' \u00b7 '}
+                        {ticket.status.toLowerCase()}
                       </Text>
                       <Text style={styles.note}>{ticket.reportedIssue}</Text>
                       <Text style={styles.note}>
-                        {ticket.vendorName || 'Internal support'} ?{' '}
+                        {ticket.vendorName || 'Internal support'}
+                        {' \u00b7 '}
                         {formatProfileDate(ticket.createdAt)}
                       </Text>
                       {ticket.estimatedReturnDate &&
@@ -372,6 +377,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 15,
+    minHeight: 48,
+    justifyContent: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
@@ -398,14 +405,16 @@ const styles = StyleSheet.create({
   },
   detail: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
   label: {
-    flex: 0.45,
+    flex: 0.42,
+    minWidth: 0,
     color: Colors.mutedForeground,
     fontFamily: 'NotoSans_400Regular',
     fontSize: 12,
     lineHeight: 19,
   },
   value: {
-    flex: 0.55,
+    flex: 0.58,
+    minWidth: 0,
     color: Colors.foreground,
     fontFamily: 'NotoSans_500Medium',
     fontSize: 12,
