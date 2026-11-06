@@ -1,7 +1,20 @@
 import { logger } from '../lib/logger';
 import * as Device from 'expo-device';
 
-import { fetchApi } from '../constants/api';
+import {
+  fetchApi,
+  getApiUrl,
+  NetworkError,
+  RequestTimeoutError,
+  ApiError,
+} from '../constants/api';
+
+export class PairingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PairingError';
+  }
+}
 
 export interface ExchangeResponse {
   token?: string;
@@ -16,6 +29,28 @@ export interface ExchangeResponse {
 export async function exchangeMobileToken(
   pairingToken: string
 ): Promise<string> {
+  pairingToken = pairingToken.trim();
+  if (!/^[a-f0-9]{64}$/i.test(pairingToken))
+    throw new PairingError(
+      'This is not a device pairing code. Scan the code from Link Device on the web app.'
+    );
+  // Probe before consuming the single-use code. A wrong LAN address cannot burn it.
+  try {
+    await fetchApi('/api/health/live', {
+      requiresAuth: false,
+      timeoutMs: 4000,
+    });
+  } catch (error) {
+    if (error instanceof NetworkError || error instanceof RequestTimeoutError)
+      throw new PairingError(
+        `The app could not reach ${getApiUrl()}. For local pairing, use the computer's Wi-Fi address; virtual-adapter and localhost addresses may not be reachable from the phone.`
+      );
+    if (error instanceof ApiError)
+      throw new PairingError(
+        'The web server responded but pairing is unavailable. Please try again shortly.'
+      );
+    throw error;
+  }
   let brand = Device.brand
     ? Device.brand.charAt(0).toUpperCase() + Device.brand.slice(1)
     : '';
@@ -64,11 +99,20 @@ export async function exchangeMobileToken(
   const deviceOs = `${osName} ${Device.osVersion || ''}`.trim();
   const deviceModel = model;
 
-  const result = await fetchApi<ExchangeResponse>('/api/auth/mobile-exchange', {
-    method: 'POST',
-    requiresAuth: false,
-    body: { token: pairingToken, deviceName, deviceOs, deviceModel },
-  });
+  let result: ExchangeResponse;
+  try {
+    result = await fetchApi<ExchangeResponse>('/api/auth/mobile-exchange', {
+      method: 'POST',
+      requiresAuth: false,
+      body: { token: pairingToken, deviceName, deviceOs, deviceModel },
+    });
+  } catch (error) {
+    if (error instanceof RequestTimeoutError)
+      throw new PairingError(
+        'The web server was reached, but pairing did not finish in time. Generate a new code on the computer and try again.'
+      );
+    throw error;
+  }
 
   const token = result.token || result.accessToken;
   if (!token) {

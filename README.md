@@ -59,6 +59,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 - **Node.js**: 22.13 or higher (Node 22 LTS is used in CI)
 - **Expo Go**: Installed on your physical iOS/Android device (or local simulator)
 - **Backend**: EITAMS Next.js Server running locally (or via Ngrok)
+- **Local pairing**: set `EXPO_PUBLIC_API_URL` to the computer's active Wi-Fi IPv4 address (the adapter with a default gateway). Avoid VirtualBox/VMware host-only addresses and `localhost` on a physical phone. Restart Expo with `npx expo start --go --clear` after changing `.env`.
 
 ### 2. Installation & Setup
 

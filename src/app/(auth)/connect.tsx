@@ -1,6 +1,6 @@
 import { toMessage } from '../../lib/errors';
 import { logger } from '../../lib/logger';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,12 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { setStoredToken } from '../../constants/api';
+import {
+  ApiError,
+  NetworkError,
+  RequestTimeoutError,
+  setStoredToken,
+} from '../../constants/api';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { QrCode, Smartphone, Laptop, HelpCircle, X } from 'lucide-react-native';
@@ -25,7 +30,7 @@ import { useAuth } from '../../context/auth-context';
 import { Button } from '../../components/ui/Button';
 import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
-import { exchangeMobileToken } from '../../services/auth';
+import { exchangeMobileToken, PairingError } from '../../services/auth';
 import { isStoredTokenUsable } from '../../lib/jwt';
 
 const SCANNER_SIZE = 260;
@@ -35,11 +40,13 @@ export default function ConnectScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const scanInFlight = useRef(false);
 
   const { setIsAuthenticated } = useAuth();
 
   const handleScan = async ({ data }: { data: string }) => {
-    if (isLoading || !isScanning) return;
+    if (scanInFlight.current || isLoading || !isScanning) return;
+    scanInFlight.current = true;
 
     setIsLoading(true);
 
@@ -51,7 +58,9 @@ export default function ConnectScreen() {
       // this gives a clear, user-facing error if the token is wrong or already
       // stale, rather than storing something every later request will reject.
       if (!isStoredTokenUsable(token)) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error
+        ).catch(() => undefined);
         Alert.alert(
           'Access Denied',
           'This app is available to Global Administrators and IT Operators. Your account does not have the required permissions.',
@@ -59,6 +68,7 @@ export default function ConnectScreen() {
             {
               text: 'OK',
               onPress: () => {
+                scanInFlight.current = false;
                 setIsScanning(false);
                 setIsLoading(false);
               },
@@ -69,11 +79,22 @@ export default function ConnectScreen() {
       }
 
       await setStoredToken(token);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success
+      ).catch(() => undefined);
       setIsAuthenticated(true);
     } catch (error) {
-      logger.error('Scan Error:', error);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (
+        error instanceof PairingError ||
+        error instanceof ApiError ||
+        error instanceof NetworkError ||
+        error instanceof RequestTimeoutError
+      )
+        logger.warn('Pairing did not complete.', error.message);
+      else logger.error('Unexpected pairing error:', error);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error
+      ).catch(() => undefined);
       Alert.alert(
         'Pairing Failed',
         toMessage(
@@ -84,6 +105,7 @@ export default function ConnectScreen() {
           {
             text: 'OK',
             onPress: () => {
+              scanInFlight.current = false;
               setIsScanning(false);
               setIsLoading(false);
             },
@@ -94,6 +116,7 @@ export default function ConnectScreen() {
   };
 
   const startScanning = async () => {
+    scanInFlight.current = false;
     if (!permission?.granted) {
       const result = await requestPermission();
       if (!result.granted) {
@@ -104,12 +127,17 @@ export default function ConnectScreen() {
         return;
       }
     }
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+      () => undefined
+    );
     setIsScanning(true);
   };
 
   const stopScanning = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (scanInFlight.current) return;
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+      () => undefined
+    );
     setIsScanning(false);
   };
 

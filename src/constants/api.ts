@@ -176,8 +176,16 @@ export async function setStoredToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
 }
 
+export class RequestTimeoutError extends Error {
+  constructor() {
+    super('The server took too long to respond. Please try again.');
+    this.name = 'RequestTimeoutError';
+  }
+}
+
 interface FetchOptions extends Omit<RequestInit, 'body'> {
   requiresAuth?: boolean;
+  timeoutMs?: number;
   /** Serialized to JSON automatically. */
   body?: unknown;
 }
@@ -203,6 +211,7 @@ export async function fetchApi<T>(
 ): Promise<T> {
   const {
     requiresAuth = true,
+    timeoutMs = REQUEST_TIMEOUT_MS,
     headers: customHeaders,
     body,
     ...restOptions
@@ -229,7 +238,7 @@ export async function fetchApi<T>(
   // Resolved outside the try: a misconfigured base URL is a configuration fault
   // and must surface as itself, not be relabelled as a connection failure.
   const url = `${getApiUrl()}${endpoint}`;
-  const timeout = createTimeoutSignal(REQUEST_TIMEOUT_MS);
+  const timeout = createTimeoutSignal(timeoutMs);
 
   let response: Response;
   try {
@@ -241,9 +250,7 @@ export async function fetchApi<T>(
     });
   } catch (cause) {
     if (timeout.timedOut) {
-      throw new NetworkError(
-        'The server took too long to respond. Check your connection and try again.'
-      );
+      throw new RequestTimeoutError();
     }
 
     // A transport failure and a programming error both arrive here as

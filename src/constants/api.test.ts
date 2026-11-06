@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 
 import {
   ApiError,
+  RequestTimeoutError,
   RateLimitError,
   SessionExpiredError,
   TOKEN_KEY,
@@ -290,4 +291,24 @@ it('does not clear local credentials for a background unlink failure', async () 
   ).rejects.toBeInstanceOf(SessionExpiredError);
   expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
   expect(handler).not.toHaveBeenCalled();
+});
+
+it('uses the caller deadline and distinguishes server timeout from network loss', async () => {
+  jest.useFakeTimers();
+  global.fetch = jest.fn(
+    (_url: unknown, init: { signal?: AbortSignal }) =>
+      new Promise((_, reject) =>
+        init.signal?.addEventListener('abort', () =>
+          reject(new Error('Aborted'))
+        )
+      )
+  ) as unknown as typeof fetch;
+  const request = fetchApi('/api/health/live', {
+    requiresAuth: false,
+    timeoutMs: 4000,
+  });
+  const assertion = expect(request).rejects.toBeInstanceOf(RequestTimeoutError);
+  await jest.advanceTimersByTimeAsync(4001);
+  await assertion;
+  jest.useRealTimers();
 });
