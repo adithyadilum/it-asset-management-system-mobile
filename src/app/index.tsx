@@ -1,8 +1,7 @@
 import { Redirect } from 'expo-router';
 
-// The root layout handles the initial gateway and global redirect logic based on auth state.
-// Here we just redirect somewhere as a fallback so we don't stay on an empty screen.
-// By default, assume they need to connect. Root layout effect will correct this if they are authenticated.
+// This entry belongs to the authenticated stack. The auth group is protected
+// after pairing, so redirecting there would bounce back here indefinitely.
 export default function App() {
-  return <Redirect href="/(auth)/connect" />;
+  return <Redirect href="/(dashboard)" />;
 }

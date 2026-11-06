@@ -1,5 +1,6 @@
 import React from 'react';
 import RootLayout from '../app/_layout';
+import RootEntry from '../app';
 import { useAuth } from './auth-context';
 import { getStoredToken, setUnauthenticatedHandler } from '../constants/api';
 import { watchDeviceSession } from '../services/device-session';
@@ -17,7 +18,8 @@ jest.mock('expo-router', () => {
   Stack.Protected = function MockProtected({ guard, children }: any) {
     return guard ? children : null;
   };
-  return { Stack };
+  function Redirect(props: any) { return React.createElement('Redirect', props); }
+  return { Stack, Redirect };
 });
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
 jest.mock('expo-splash-screen', () => ({
@@ -68,5 +70,12 @@ it('removes all protected screens on revocation and clears the notice after pair
   });
   expect(mockContext.sessionNotice).toBeNull();
   expect(names()).toContain('(dashboard)');
+  await act(async () => tree.unmount());
+});
+
+it('opens Home from the authenticated root instead of redirecting to the protected pairing screen', async () => {
+  let tree: any;
+  await act(async () => { tree = create(<RootEntry />); });
+  expect(tree.root.findByType('Redirect').props.href).toBe('/(dashboard)');
   await act(async () => tree.unmount());
 });
