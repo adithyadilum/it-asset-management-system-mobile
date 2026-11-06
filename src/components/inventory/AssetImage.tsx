@@ -32,6 +32,7 @@ function ImageContent({ uri, large }: { uri: string | null; large: boolean }) {
           source={{ uri }}
           style={{ width: size, height: size }}
           resizeMode="contain"
+          resizeMethod={large ? 'auto' : 'resize'}
           onError={() => setFailed(true)}
           accessibilityLabel="Asset image"
         />

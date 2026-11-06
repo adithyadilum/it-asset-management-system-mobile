@@ -1,3 +1,4 @@
+import { appendUniqueById } from '../lib/list-pages';
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { fetchTasks, type TaskFilters } from '../services/operations';
@@ -30,12 +31,7 @@ export function useTasks(filters: TaskFilters = {}) {
           ...next,
           data:
             page > 1 && previous
-              ? [
-                  ...previous.data,
-                  ...next.data.filter(
-                    (row) => !previous.data.some((old) => old.id === row.id)
-                  ),
-                ]
+              ? appendUniqueById(previous.data, next.data)
               : next.data,
         }));
       } catch (cause) {
@@ -62,17 +58,23 @@ export function useTasks(filters: TaskFilters = {}) {
       };
     }, [load])
   );
+  const refresh = useCallback(() => load(1, true), [load]);
+  const retry = useCallback(() => load(failedPage.current), [load]);
+  const loadMore = useCallback(
+    () =>
+      result && result.meta.page < result.meta.totalPages && !error
+        ? load(result.meta.page + 1)
+        : undefined,
+    [result, error, load]
+  );
   return {
     result,
     loading,
     refreshing,
     loadingMore,
     error,
-    refresh: () => load(1, true),
-    retry: () => load(failedPage.current),
-    loadMore: () =>
-      result && result.meta.page < result.meta.totalPages && !error
-        ? load(result.meta.page + 1)
-        : undefined,
+    refresh,
+    retry,
+    loadMore,
   };
 }

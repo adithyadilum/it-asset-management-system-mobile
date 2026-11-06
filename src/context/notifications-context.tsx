@@ -91,7 +91,7 @@ export function NotificationsProvider({
         const result = await apiFetchNotifications(limit, offset);
         if (requestGeneration !== generation.current) return;
         setNotifications((prev) =>
-          mergeNotificationPages(offset === 0 ? [] : prev, result.data)
+          mergeNotificationPages(prev, result.data, offset === 0)
         );
         nextOffset.current = offset + result.pagination.returned;
         setHasMore(
@@ -146,7 +146,9 @@ export function NotificationsProvider({
     setError(null);
     try {
       await apiMarkAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) =>
+        prev.map((n) => (n.isRead ? n : { ...n, isRead: true }))
+      );
       await loadUnreadCount();
     } catch (err) {
       setError(toMessage(err, 'Could not mark alerts as read.'));

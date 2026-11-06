@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -5,7 +6,11 @@ import { Colors } from '../../constants/colors';
 import { AssetImage } from '../inventory/AssetImage';
 import { taskLabels, type OperationTask } from '../../types/operations';
 import { formatProfileDate } from '../../lib/asset-profile';
-export function TaskRow({ task }: { task: OperationTask }) {
+export const TaskRow = memo(function TaskRow({
+  task,
+}: {
+  task: OperationTask;
+}) {
   const router = useRouter();
   return (
     <Pressable
@@ -88,4 +93,4 @@ export function TaskRow({ task }: { task: OperationTask }) {
       <ChevronRight size={16} color={Colors.tabInactive} />
     </Pressable>
   );
-}
+});

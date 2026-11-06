@@ -15,7 +15,19 @@ import { Colors } from '../../constants/colors';
 import { TaskRow } from '../../components/operations/TaskRow';
 import { StateMessage } from '../../components/ui/StateMessage';
 import { useTasks } from '../../hooks/useTasks';
-import { taskKinds, taskLabels, type TaskKind } from '../../types/operations';
+import type { ListRenderItemInfo } from 'react-native';
+import {
+  taskKinds,
+  taskLabels,
+  type OperationTask,
+  type TaskKind,
+} from '../../types/operations';
+const taskKey = (task: OperationTask) => task.id;
+const renderTask = ({ item }: ListRenderItemInfo<OperationTask>) => (
+  <TaskRow task={item} />
+);
+const EMPTY_TASKS: OperationTask[] = [];
+
 export default function TasksScreen() {
   const params = useLocalSearchParams<{ kind?: string }>();
   const initial = taskKinds.includes(params.kind as TaskKind)
@@ -130,9 +142,12 @@ function TasksView({ initial }: { initial?: TaskKind }) {
         <StateMessage type="loading" message="Loading tasks..." />
       ) : (
         <FlatList
-          data={result?.data ?? []}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <TaskRow task={item} />}
+          data={result?.data ?? EMPTY_TASKS}
+          keyExtractor={taskKey}
+          initialNumToRender={10}
+          maxToRenderPerBatch={6}
+          windowSize={7}
+          renderItem={renderTask}
           contentContainerStyle={{
             padding: 18,
             gap: 10,
@@ -143,9 +158,7 @@ function TasksView({ initial }: { initial?: TaskKind }) {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={refresh} />
           }
-          onEndReached={() => {
-            void loadMore();
-          }}
+          onEndReached={loadMore}
           onEndReachedThreshold={0.3}
           ListEmptyComponent={
             !error ? (

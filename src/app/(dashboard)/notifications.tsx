@@ -1,12 +1,15 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { getApiUrl } from '../../constants/api';
 import { notificationDestination } from '../../lib/notification-navigation';
 import { StateMessage } from '../../components/ui/StateMessage';
 import { logger } from '../../lib/logger';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
+import type { ListRenderItemInfo } from 'react-native';
+import type { NotificationEntry } from '../../services/notifications';
 import {
   Alert,
+  AppState,
   View,
   Text,
   StyleSheet,
@@ -16,11 +19,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-  Layout,
-} from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
   Bell,
   ArrowUpDown,
@@ -38,11 +37,10 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useNotifications } from '../../context/notifications-context';
 import { Colors } from '../../constants/colors';
-function formatTimeAgo(dateString: string) {
+function formatTimeAgo(dateString: string, now: number) {
   try {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = now - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
@@ -135,6 +133,83 @@ const getEventTypeConfig = (eventType: string): EventTypeConfig => {
       };
   }
 };
+const notificationKey = (item: NotificationEntry) => item.id;
+const NotificationRow = memo(function NotificationRow({
+  item,
+  onPress,
+  nowMinute,
+}: {
+  item: NotificationEntry;
+  onPress: (
+    id: string,
+    isRead: boolean,
+    targetUrl: string | null
+  ) => Promise<void>;
+  nowMinute: number;
+}) {
+  const config = getEventTypeConfig(item.eventType);
+  const IconComponent = config.icon;
+  return (
+    <View style={styles.cardWrapper}>
+      <View
+        style={[
+          styles.card,
+          !item.isRead ? styles.cardUnread : styles.cardRead,
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${item.isRead ? 'Read' : 'Unread'} alert: ${item.title}`}
+          onPress={() => onPress(item.id, item.isRead, item.targetUrl)}
+          style={styles.cardContent}
+        >
+          {/* Left status bar accent */}
+          {!item.isRead && <View style={styles.unreadIndicatorBar} />}
+
+          {/* Event Type Icon */}
+          <View
+            style={[
+              styles.iconContainer,
+              {
+                backgroundColor: config.bg,
+              },
+            ]}
+          >
+            <IconComponent size={18} color={config.color} strokeWidth={2} />
+          </View>
+
+          {/* Text block */}
+          <View style={styles.textContainer}>
+            <View style={styles.cardHeaderRow}>
+              <Text
+                style={[
+                  styles.cardTitle,
+                  !item.isRead ? styles.textUnread : styles.textRead,
+                ]}
+                numberOfLines={1}
+              >
+                {item.title}
+              </Text>
+              <Text style={styles.timeText}>
+                {formatTimeAgo(item.createdAt, nowMinute * 60_000)}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.cardMessage,
+                !item.isRead ? styles.messageUnread : styles.messageRead,
+              ]}
+              numberOfLines={2}
+            >
+              {item.message}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+    </View>
+  );
+});
+
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -173,118 +248,88 @@ export default function NotificationsScreen() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await markAllAsRead();
   };
-  const handleNotificationPress = async (
-    id: string,
-    isRead: boolean,
-    targetUrl: string | null
-  ) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (!isRead) {
-      await markAsRead(id);
-    }
-    const destination = notificationDestination(getApiUrl(), targetUrl);
-    if (destination?.kind === 'native') router.push(destination.path);
-    else if (destination?.kind === 'web') {
-      try {
-        await Linking.openURL(destination.url);
-      } catch {
-        Alert.alert(
-          'Unable to open alert',
-          'Try opening this alert from the desktop.'
-        );
+  const handleNotificationPress = useCallback(
+    async (id: string, isRead: boolean, targetUrl: string | null) => {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (!isRead) {
+        await markAsRead(id);
       }
-    }
-  };
+      const destination = notificationDestination(getApiUrl(), targetUrl);
+      if (destination?.kind === 'native') router.push(destination.path);
+      else if (destination?.kind === 'web') {
+        try {
+          await Linking.openURL(destination.url);
+        } catch {
+          Alert.alert(
+            'Unable to open alert',
+            'Try opening this alert from the desktop.'
+          );
+        }
+      }
+    },
+    [markAsRead, router]
+  );
 
   // Perform local sorting
-  const sortedNotifications = [...notifications].sort((a, b) => {
-    if (activeSort === 'date-desc') {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-    if (activeSort === 'date-asc') {
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    }
-    if (activeSort === 'name-asc') {
-      return a.title.localeCompare(b.title);
-    }
-    if (activeSort === 'name-desc') {
-      return b.title.localeCompare(a.title);
-    }
-    return 0;
-  });
-  const renderItem = ({
-    item,
-    index,
-  }: {
-    item: (typeof notifications)[0];
-    index: number;
-  }) => {
-    const config = getEventTypeConfig(item.eventType);
-    const IconComponent = config.icon;
-    return (
-      <Animated.View
-        layout={Layout.springify()}
-        entering={FadeInDown.delay(Math.min(index, 10) * 20).duration(350)}
-        style={styles.cardWrapper}
-      >
-        <View
-          style={[
-            styles.card,
-            !item.isRead ? styles.cardUnread : styles.cardRead,
-          ]}
-        >
-          <Pressable
-            onPress={() =>
-              handleNotificationPress(item.id, item.isRead, item.targetUrl)
-            }
-            style={styles.cardContent}
-          >
-            {/* Left status bar accent */}
-            {!item.isRead && <View style={styles.unreadIndicatorBar} />}
+  const sortedNotifications = useMemo(
+    () =>
+      [...notifications].sort((a, b) => {
+        if (activeSort === 'date-desc') {
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        }
+        if (activeSort === 'date-asc') {
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        }
+        if (activeSort === 'name-asc') {
+          return a.title.localeCompare(b.title);
+        }
+        if (activeSort === 'name-desc') {
+          return b.title.localeCompare(a.title);
+        }
+        return 0;
+      }),
+    [notifications, activeSort]
+  );
+  const [nowMinute, setNowMinute] = useState(() =>
+    Math.floor(Date.now() / 60_000)
+  );
+  // One clock for visible alert ages; pause it off-tab and in the background.
+  useFocusEffect(
+    useCallback(() => {
+      let timer: ReturnType<typeof setInterval> | undefined;
+      const update = () => setNowMinute(Math.floor(Date.now() / 60_000));
+      const sync = (state: string) => {
+        if (state === 'active') {
+          update();
+          timer ??= setInterval(update, 60_000);
+        } else {
+          clearInterval(timer);
+          timer = undefined;
+        }
+      };
+      const subscription = AppState.addEventListener('change', sync);
+      sync(AppState.currentState);
+      return () => {
+        clearInterval(timer);
+        subscription.remove();
+      };
+    }, [])
+  );
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<NotificationEntry>) => (
+      <NotificationRow
+        item={item}
+        onPress={handleNotificationPress}
+        nowMinute={nowMinute}
+      />
+    ),
+    [handleNotificationPress, nowMinute]
+  );
 
-            {/* Event Type Icon */}
-            <View
-              style={[
-                styles.iconContainer,
-                {
-                  backgroundColor: config.bg,
-                },
-              ]}
-            >
-              <IconComponent size={18} color={config.color} strokeWidth={2} />
-            </View>
-
-            {/* Text block */}
-            <View style={styles.textContainer}>
-              <View style={styles.cardHeaderRow}>
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    !item.isRead ? styles.textUnread : styles.textRead,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.title}
-                </Text>
-                <Text style={styles.timeText}>
-                  {formatTimeAgo(item.createdAt)}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.cardMessage,
-                  !item.isRead ? styles.messageUnread : styles.messageRead,
-                ]}
-                numberOfLines={2}
-              >
-                {item.message}
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-      </Animated.View>
-    );
-  };
   return (
     <View
       style={[
@@ -518,7 +563,10 @@ export default function NotificationsScreen() {
             ) : null
           }
           data={sortedNotifications}
-          keyExtractor={(item) => item.id}
+          keyExtractor={notificationKey}
+          initialNumToRender={10}
+          maxToRenderPerBatch={6}
+          windowSize={7}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

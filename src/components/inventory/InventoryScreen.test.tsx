@@ -1,12 +1,14 @@
 import React from 'react';
 import InventoryScreen from '../../app/(dashboard)/inventory';
 import { useInventory } from '../../hooks/useInventory';
+import { AssetImage } from './AssetImage';
 import type { InventoryResponse } from '../../types/inventory';
 const { create, act } = jest.requireActual('react-test-renderer');
 const mockPush = jest.fn(),
   retry = jest.fn();
+const mockRouter = { push: mockPush };
 jest.mock('../../hooks/useInventory', () => ({ useInventory: jest.fn() }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }),
 }));
@@ -18,7 +20,7 @@ jest.mock('../../components/inventory/InventoryFiltersSheet', () => ({
   InventoryFiltersSheet: () => null,
 }));
 jest.mock('../../components/inventory/AssetImage', () => ({
-  AssetImage: () => null,
+  AssetImage: jest.fn(() => null),
 }));
 const result: InventoryResponse = {
   data: [
@@ -105,6 +107,54 @@ it('shows an actionable empty state instead of an empty list', async () => {
   });
   expect(
     tree.root.findAllByProps({ children: 'No assets found' }).length
+  ).toBeGreaterThan(0);
+  await act(async () => tree.unmount());
+});
+
+it('keeps existing rows idle during typing and pagination, while updating changed assets', async () => {
+  const state = jest.mocked(useInventory)({});
+  const first = result.data[0];
+  const second = { ...first, id: 'asset-2', assetTag: 'LAP-105' };
+  let data = [first, second];
+  const show = (loadingMore = false) =>
+    jest.mocked(useInventory).mockReturnValue({
+      ...state,
+      loadingMore,
+      result: { ...result, data },
+    });
+  show();
+  let tree: any;
+  await act(async () => {
+    tree = create(<InventoryScreen />);
+  });
+  expect(AssetImage).toHaveBeenCalledTimes(2);
+  await act(async () => {
+    tree.root
+      .findAll(
+        (node: any) =>
+          node.props.accessibilityLabel === 'Search inventory' &&
+          typeof node.props.onChangeText === 'function'
+      )[0]
+      .props.onChangeText('Latitude');
+  });
+  expect(AssetImage).toHaveBeenCalledTimes(2);
+  show(true);
+  await act(async () => tree.update(<InventoryScreen />));
+  expect(AssetImage).toHaveBeenCalledTimes(2);
+  data = [...data, { ...first, id: 'asset-3', assetTag: 'LAP-106' }];
+  show();
+  await act(async () => tree.update(<InventoryScreen />));
+  expect(AssetImage).toHaveBeenCalledTimes(3);
+  data = [
+    first,
+    { ...second, name: 'Updated engineering laptop', status: 'In Repair' },
+    data[2],
+  ];
+  show();
+  await act(async () => tree.update(<InventoryScreen />));
+  expect(AssetImage).toHaveBeenCalledTimes(4);
+  expect(
+    tree.root.findAllByProps({ children: 'Updated engineering laptop' }).length
   ).toBeGreaterThan(0);
   await act(async () => tree.unmount());
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,20 +11,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import {
-  ChevronRight,
-  MapPin,
-  Search,
-  SlidersHorizontal,
-  X,
-} from 'lucide-react-native';
+import { Search, SlidersHorizontal, X } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
-import { AssetImage } from '../../components/inventory/AssetImage';
-import { AssetStatus } from '../../components/inventory/AssetStatus';
+import { InventoryAssetRow } from '../../components/inventory/InventoryAssetRow';
 import { InventoryFiltersSheet } from '../../components/inventory/InventoryFiltersSheet';
 import { StateMessage } from '../../components/ui/StateMessage';
 import { useInventory } from '../../hooks/useInventory';
-import type { InventoryFilters } from '../../types/inventory';
+import type { ListRenderItemInfo } from 'react-native';
+import type { InventoryAsset, InventoryFilters } from '../../types/inventory';
+
+const assetKey = (asset: InventoryAsset) => asset.id;
+const EMPTY_ASSETS: InventoryAsset[] = [];
 
 export default function InventoryScreen() {
   const insets = useSafeAreaInsets();
@@ -47,6 +44,18 @@ export default function InventoryScreen() {
     loadMore,
   } = useInventory({ ...filters, query: search });
   const router = useRouter();
+  const openAsset = useCallback(
+    (id: string) => {
+      router.push({ pathname: '/asset/[assetId]', params: { assetId: id } });
+    },
+    [router]
+  );
+  const renderAsset = useCallback(
+    ({ item }: ListRenderItemInfo<InventoryAsset>) => (
+      <InventoryAssetRow asset={item} onOpen={openAsset} />
+    ),
+    [openAsset]
+  );
   const count = Object.values(filters).filter(
     (value) => value !== undefined
   ).length;
@@ -130,8 +139,11 @@ export default function InventoryScreen() {
         <StateMessage type="loading" message="Loading inventory..." />
       ) : (
         <FlatList
-          data={result?.data ?? []}
-          keyExtractor={(item) => item.id}
+          data={result?.data ?? EMPTY_ASSETS}
+          keyExtractor={assetKey}
+          initialNumToRender={10}
+          maxToRenderPerBatch={6}
+          windowSize={7}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.list}
           refreshControl={
@@ -141,9 +153,7 @@ export default function InventoryScreen() {
               tintColor={Colors.primary}
             />
           }
-          onEndReached={() => {
-            void loadMore();
-          }}
+          onEndReached={loadMore}
           onEndReachedThreshold={0.35}
           ListHeaderComponent={
             result ? (
@@ -187,63 +197,7 @@ export default function InventoryScreen() {
               </Text>
             ) : null
           }
-          renderItem={({ item }) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`View ${item.assetTag}, ${item.name || item.model}`}
-              onPress={() =>
-                router.push({
-                  pathname: '/asset/[assetId]',
-                  params: { assetId: item.id },
-                })
-              }
-              style={styles.row}
-              android_ripple={{ color: Colors.muted }}
-            >
-              <AssetImage uri={item.imageUrl} />
-              <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-
-                    gap: 6,
-                  }}
-                >
-                  <Text
-                    style={[styles.tag, { flexShrink: 1 }]}
-                    numberOfLines={1}
-                  >
-                    {item.assetTag}
-                  </Text>
-                  <AssetStatus status={item.status} />
-                </View>
-                <Text style={styles.assetName} numberOfLines={1}>
-                  {item.name || `${item.brand} ${item.model}`}
-                </Text>
-                <Text style={styles.meta} numberOfLines={1}>
-                  {item.category}
-                  {item.assignedTo ? ` \u00b7 ${item.assignedTo}` : ''}
-                </Text>
-                {item.location ? (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      gap: 4,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <MapPin size={11} color={Colors.mutedForeground} />
-                    <Text style={[styles.meta, { flex: 1 }]} numberOfLines={1}>
-                      {item.location}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              <ChevronRight size={16} color={Colors.tabInactive} />
-            </Pressable>
-          )}
+          renderItem={renderAsset}
         />
       )}
       <InventoryFiltersSheet
@@ -323,28 +277,6 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSans_500Medium',
     fontSize: 12,
     marginBottom: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 16,
-    padding: 14,
-  },
-  tag: { fontFamily: 'NotoSans_700Bold', color: Colors.primary, fontSize: 11 },
-  assetName: {
-    fontFamily: 'NotoSans_600SemiBold',
-    color: Colors.foreground,
-    fontSize: 14,
-  },
-  meta: {
-    fontFamily: 'NotoSans_400Regular',
-    color: Colors.mutedForeground,
-    fontSize: 11,
-    flexShrink: 1,
   },
   empty: { alignItems: 'center', padding: 32, gap: 10 },
   emptyTitle: {
