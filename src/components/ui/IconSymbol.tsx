@@ -20,7 +20,7 @@ const ICON_MAP: Record<string, string> = {
   scan: '⊞',
   'qr-code': '⊞',
   search: '🔍',
-  
+
   // UI elements
   chevronRight: '›',
   chevronLeft: '‹',
@@ -46,20 +46,24 @@ interface IconSymbolProps {
   name: string;
   size?: number;
   color?: string;
-  className?: string;
+  style?: import('react-native').StyleProp<import('react-native').TextStyle>;
 }
 
 /**
  * Lightweight icon component using Unicode symbols.
  * Avoids heavy icon library dependency.
  */
-export function IconSymbol({ name, size = 20, color = Colors.foreground, className = '' }: IconSymbolProps) {
+export function IconSymbol({
+  name,
+  size = 20,
+  color = Colors.foreground,
+  style,
+}: IconSymbolProps) {
   const symbol = ICON_MAP[name] || '•';
 
   return (
     <Text
-      style={[styles.icon, { fontSize: size, color }]}
-      className={className}
+      style={[styles.icon, { fontSize: size, color }, style]}
       allowFontScaling={false}
     >
       {symbol}

@@ -1,7 +1,5 @@
 /**
- * Semantic color constants for use in StyleSheet contexts
- * where NativeWind classes aren't available (e.g., status bar tint, icon fills).
- * Values mirror the CSS tokens from global.css.
+ * Shared native color tokens used throughout the app.
  */
 
 export const Colors = {

@@ -12,30 +12,28 @@ jest.mock(
   () => new Proxy({}, { get: () => () => null })
 );
 it('routes live Home metrics and handover shortcuts to their actual queues and forms', async () => {
-  jest
-    .mocked(useTasks)
-    .mockReturnValue({
-      result: {
-        data: [],
-        counts: {
-          handovers: 2,
-          returns: 4,
-          inspections: 1,
-          maintenance: 3,
-          renewals: 0,
-          warranties: 0,
-          disposals: 0,
-        },
-        meta: { page: 1, pageSize: 5, total: 10, totalPages: 2 },
+  jest.mocked(useTasks).mockReturnValue({
+    result: {
+      data: [],
+      counts: {
+        handovers: 2,
+        returns: 4,
+        inspections: 1,
+        maintenance: 3,
+        renewals: 0,
+        warranties: 0,
+        disposals: 0,
       },
-      loading: false,
-      refreshing: false,
-      loadingMore: false,
-      error: '',
-      refresh: jest.fn(),
-      retry: jest.fn(),
-      loadMore: jest.fn(),
-    });
+      meta: { page: 1, pageSize: 5, total: 10, totalPages: 2 },
+    },
+    loading: false,
+    refreshing: false,
+    loadingMore: false,
+    error: '',
+    refresh: jest.fn(),
+    retry: jest.fn(),
+    loadMore: jest.fn(),
+  });
   let tree: any;
   await act(async () => {
     tree = create(<Home />);
@@ -48,6 +46,11 @@ it('routes live Home metrics and handover shortcuts to their actual queues and f
           typeof node.props.onPress === 'function'
       )[0]
       .props.onPress();
+  await act(async () => press('Launch Scanner'));
+  expect(mockPush).toHaveBeenLastCalledWith({
+    pathname: '/(dashboard)/scanner',
+    params: { operation: '' },
+  });
   await act(async () => press('Open Returns due'));
   expect(mockPush).toHaveBeenLastCalledWith({
     pathname: '/(dashboard)/tasks',

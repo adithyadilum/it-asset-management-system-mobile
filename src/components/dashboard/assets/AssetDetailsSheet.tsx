@@ -17,14 +17,12 @@ import { Badge } from '../../ui/Badge';
 import { getAssetPresentation, getReturnStatus } from './AssetRow';
 import type { AssetEntry } from '../../../services/assets';
 import type { ActivityEventType } from '../../../types';
-
 interface AssetDetailsSheetProps {
   asset: AssetEntry | null;
   visible: boolean;
   onClose: () => void;
   onIssueReported?: () => void;
 }
-
 function formatDate(iso?: string): string {
   if (!iso) return 'Open-ended';
   try {
@@ -56,10 +54,8 @@ export function AssetDetailsSheet({
   };
   const slideAnim = useAnimatedValue(700);
   const backdropAnim = useAnimatedValue(0);
-
   useEffect(() => {
     if (!asset) return;
-
     if (visible) {
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -89,13 +85,10 @@ export function AssetDetailsSheet({
       ]).start();
     }
   }, [visible, asset, slideAnim, backdropAnim]);
-
   if (!asset) return null;
-
   const presentation = getAssetPresentation(asset.pillar, asset.name);
   const IconComponent = presentation.icon;
   const returnInfo = getReturnStatus(asset.expectedReturnDate);
-
   return (
     <Modal
       visible={visible}
@@ -106,7 +99,12 @@ export function AssetDetailsSheet({
     >
       {/* Backdrop */}
       <Animated.View
-        style={[sheet.backdrop, { opacity: backdropAnim }]}
+        style={[
+          sheet.backdrop,
+          {
+            opacity: backdropAnim,
+          },
+        ]}
         pointerEvents={visible ? 'auto' : 'none'}
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
@@ -114,24 +112,36 @@ export function AssetDetailsSheet({
 
       {/* Sheet */}
       <Animated.View
-        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl"
         style={[
-          sheet.shadow,
-          { paddingBottom: insets.bottom + 20 },
-          { transform: [{ translateY: slideAnim }] },
+          nativeStyles.panel,
+          [
+            sheet.shadow,
+            {
+              paddingBottom: insets.bottom + 20,
+            },
+            {
+              transform: [
+                {
+                  translateY: slideAnim,
+                },
+              ],
+            },
+          ],
         ]}
       >
         {/* Drag handle */}
-        <View className="self-center w-9 h-1 bg-slate-200 rounded-full mt-2.5 mb-1" />
+        <View style={nativeStyles.panel2} />
 
         {/* ── Header ── */}
-        <View className="flex-row items-center justify-between px-5 pt-3 pb-3">
-          <Text className="text-[17px] font-sansBold text-slate-800">
-            Asset Details
-          </Text>
+        <View style={nativeStyles.row}>
+          <Text style={nativeStyles.title}>Asset Details</Text>
           <Pressable
-            className="p-1"
-            style={({ pressed }) => pressed && { opacity: 0.5 }}
+            style={({ pressed }) => [
+              nativeStyles.padded,
+              pressed && {
+                opacity: 0.5,
+              },
+            ]}
             onPress={close}
             accessibilityLabel="Close"
           >
@@ -140,7 +150,6 @@ export function AssetDetailsSheet({
         </View>
 
         <ScrollView
-          className="flex-1"
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingBottom: 8,
@@ -148,35 +157,27 @@ export function AssetDetailsSheet({
           }}
           showsVerticalScrollIndicator={false}
           bounces={false}
+          style={nativeStyles.container}
         >
           {/* ── Asset identity & details block ── */}
-          <View className="bg-slate-50 border border-slate-200/60 rounded-2xl p-5 mb-1">
+          <View style={nativeStyles.panel3}>
             {/* Icon and Name */}
-            <View className="flex-row items-center gap-3.5 mb-4">
+            <View style={nativeStyles.row2}>
               <IconComponent size={32} color="#0A1A8A" strokeWidth={1.5} />
-              <Text
-                className="text-[19px] font-sansBold text-slate-900 flex-1"
-                numberOfLines={1}
-              >
+              <Text numberOfLines={1} style={nativeStyles.title2}>
                 {asset.name}
               </Text>
             </View>
 
             {/* Key-Value details */}
-            <View className="gap-2.5">
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Asset ID:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
-                  {asset.tagId}
-                </Text>
+            <View style={nativeStyles.container2}>
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Asset ID:</Text>
+                <Text style={nativeStyles.text2}>{asset.tagId}</Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Status:
-                </Text>
-                <View className="flex-1 items-start">
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Status:</Text>
+                <View style={nativeStyles.container3}>
                   <Badge
                     type={
                       returnInfo.isOverdue
@@ -187,40 +188,33 @@ export function AssetDetailsSheet({
                   />
                 </View>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Condition:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Condition:</Text>
+                <Text style={nativeStyles.text2}>
                   {asset.condition ?? 'Not recorded'}
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Assigned By:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Assigned By:</Text>
+                <Text style={nativeStyles.text2}>
                   {asset.assignedByName ?? 'Not recorded'}
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Assigned On:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Assigned On:</Text>
+                <Text style={nativeStyles.text2}>
                   {formatDate(asset.assignedDate)}
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Return By:
-                </Text>
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Return By:</Text>
                 <Text
-                  className={`flex-1 text-sm font-sans ${
+                  style={[
+                    nativeStyles.text3,
                     returnInfo.isOverdue
-                      ? 'text-rose-600 font-sansBold'
-                      : 'text-slate-800'
-                  }`}
+                      ? nativeStyles.container4
+                      : nativeStyles.container5,
+                  ]}
                 >
                   {asset.expectedReturnDate
                     ? formatDate(asset.expectedReturnDate)
@@ -228,14 +222,15 @@ export function AssetDetailsSheet({
                 </Text>
               </View>
               {asset.expectedReturnDate && (
-                <View className="flex-row items-center">
-                  <Text className="w-28 text-sm font-sans text-slate-500">
-                    Time Left:
-                  </Text>
+                <View style={nativeStyles.row3}>
+                  <Text style={nativeStyles.text}>Time Left:</Text>
                   <Text
-                    className={`flex-1 text-sm font-sansBold ${
-                      returnInfo.isOverdue ? 'text-rose-600' : 'text-amber-600'
-                    }`}
+                    style={[
+                      nativeStyles.text4,
+                      returnInfo.isOverdue
+                        ? nativeStyles.container6
+                        : nativeStyles.container7,
+                    ]}
                   >
                     {returnInfo.label}
                   </Text>
@@ -259,22 +254,24 @@ export function AssetDetailsSheet({
           ) : (
             <>
               {/* ── Help / Policy disclaimer ── */}
-              <Text className="text-sm font-sans text-slate-500 leading-relaxed mt-1">
+              <Text style={nativeStyles.text5}>
                 If this device requires support, repairs, or has been lost,
                 please tap the Report Issue button to raise a support ticket.
               </Text>
 
               {/* ── Action buttons ── */}
-              <View className="mt-4 pb-2">
+              <View style={nativeStyles.container8}>
                 {/* Report Issue — outline */}
                 <Pressable
-                  className="w-full bg-white border border-slate-200 py-3.5 rounded-xl items-center justify-center"
-                  style={({ pressed }) => pressed && { opacity: 0.7 }}
+                  style={({ pressed }) => [
+                    nativeStyles.panel4,
+                    pressed && {
+                      opacity: 0.7,
+                    },
+                  ]}
                   onPress={() => setReporting(true)}
                 >
-                  <Text className="text-slate-800 text-sm font-sansBold text-center">
-                    Report Issue
-                  </Text>
+                  <Text style={nativeStyles.text6}>Report Issue</Text>
                 </Pressable>
               </View>
             </>
@@ -284,7 +281,6 @@ export function AssetDetailsSheet({
     </Modal>
   );
 }
-
 const sheet = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFill,
@@ -295,11 +291,148 @@ const sheet = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -3 },
+        shadowOffset: {
+          width: 0,
+          height: -3,
+        },
         shadowOpacity: 0.1,
         shadowRadius: 12,
       },
-      android: { elevation: 20 },
+      android: {
+        elevation: 20,
+      },
     }),
+  },
+});
+const nativeStyles = StyleSheet.create({
+  panel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+  },
+  panel2: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 9999,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  title: {
+    fontSize: 17,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#1E293B',
+  },
+  padded: {
+    padding: 4,
+  },
+  container: {
+    flex: 1,
+  },
+  panel3: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.6)',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 4,
+  },
+  row2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 16,
+  },
+  title2: {
+    fontSize: 19,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#0F172A',
+    flex: 1,
+  },
+  container2: {
+    gap: 10,
+  },
+  row3: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  text: {
+    width: 112,
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#64748B',
+  },
+  text2: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#1E293B',
+  },
+  container3: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  text3: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+  },
+  container4: {
+    color: '#E11D48',
+    fontFamily: 'NotoSans_700Bold',
+  },
+  container5: {
+    color: '#1E293B',
+  },
+  text4: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'NotoSans_700Bold',
+  },
+  container6: {
+    color: '#E11D48',
+  },
+  container7: {
+    color: '#D97706',
+  },
+  text5: {
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#64748B',
+    lineHeight: 22,
+    marginTop: 4,
+  },
+  container8: {
+    marginTop: 16,
+    paddingBottom: 8,
+  },
+  panel4: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  text6: {
+    color: '#1E293B',
+    fontSize: 14,
+    fontFamily: 'NotoSans_700Bold',
+    textAlign: 'center',
   },
 });

@@ -11,10 +11,11 @@ import {
   Printer,
   Server,
   Tablet,
+  ChevronRight,
 } from 'lucide-react-native';
-import { Badge } from '../../ui/Badge';
+import { Colors } from '../../../constants/colors';
+import { AssetImage } from '../../inventory/AssetImage';
 import type { AssetEntry } from '../../../services/assets';
-import type { ActivityEventType } from '../../../types';
 
 interface AssetRowProps {
   asset: AssetEntry;
@@ -134,72 +135,71 @@ function formatAssignedDate(dateStr?: string): string | null {
   }
 }
 
-/**
- * Individual asset row card for the My Assets screen.
- * Redesigned to exactly match the flat border style, typography,
- * and layout structure of the web app's asset card.
- */
+/** Compact custody summary; full details are available on tap. */
 export const AssetRow = React.memo(function AssetRow({
   asset,
   onPress,
 }: AssetRowProps) {
-  const presentation = getAssetPresentation(asset.pillar, asset.name);
-  const IconComponent = presentation.icon;
-  const formattedDate = formatAssignedDate(asset.assignedDate);
-  const displayCategory = asset.category || presentation.label;
-
   const returnInfo = getReturnStatus(asset.expectedReturnDate);
-  const isOverdue = returnInfo.isOverdue;
-
-  // Custom warning border/bg style if overdue
-  const cardClassName = isOverdue
-    ? 'bg-amber-50/50 border border-amber-200 p-5 rounded-2xl mb-3.5'
-    : 'bg-white border border-slate-200/80 p-5 rounded-2xl mb-3.5';
-
   return (
     <Pressable
-      className={cardClassName}
-      style={({ pressed }) => pressed && { opacity: 0.85 }}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`View ${asset.name}, ${asset.tagId}`}
+      android_ripple={{ color: Colors.muted }}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 14,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 16,
+        backgroundColor: Colors.card,
+        overflow: 'hidden',
+      }}
     >
-      {/* Header: Type and Status Badge */}
-      <View className="flex-row items-center justify-between mb-3.5">
-        <Text className="text-sm font-sans text-slate-500">
-          {displayCategory}
-        </Text>
-        <Badge
-          type={isOverdue ? 'lost' : (asset.status as ActivityEventType)}
-          label={isOverdue ? 'Overdue' : asset.statusLabel}
-        />
-      </View>
-
-      {/* Middle: Icon and Name */}
-      <View className="flex-row items-center gap-3 mb-3.5">
-        <IconComponent size={26} color="#475569" strokeWidth={1.5} />
+      <AssetImage uri={asset.imageUrl ?? null} />
+      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
         <Text
-          className="text-lg font-sansBold text-slate-900 flex-1"
           numberOfLines={1}
+          style={{
+            fontFamily: 'NotoSans_600SemiBold',
+            fontSize: 11,
+            color: Colors.primary,
+          }}
+        >
+          {asset.tagId}
+          {' \u00b7 '}
+          {asset.category ||
+            getAssetPresentation(asset.pillar, asset.name).label}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={{
+            fontFamily: 'NotoSans_600SemiBold',
+            fontSize: 14,
+            color: Colors.foreground,
+          }}
         >
           {asset.name}
         </Text>
-      </View>
-
-      {/* Bottom: Metadata Lines */}
-      <View className="gap-1">
-        <Text className="text-[13px] font-sans text-slate-500 leading-5">
-          Asset ID: {asset.tagId}
+        <Text
+          numberOfLines={1}
+          style={{
+            fontSize: 11,
+            color: returnInfo.isOverdue
+              ? Colors.destructive
+              : Colors.mutedForeground,
+          }}
+        >
+          {asset.expectedReturnDate
+            ? returnInfo.label
+            : `Assigned ${formatAssignedDate(asset.assignedDate) || ''}`.trim()}
         </Text>
-        <Text className="text-[13px] font-sans text-slate-500 leading-5">
-          Assigned: {formattedDate ?? '-'}
-        </Text>
-        {returnInfo.label && asset.expectedReturnDate && (
-          <Text
-            className={`text-[13px] leading-5 ${isOverdue ? 'text-rose-600 font-sansBold' : 'text-amber-600 font-sansBold'}`}
-          >
-            {returnInfo.label}
-          </Text>
-        )}
       </View>
+      <ChevronRight size={16} color={Colors.tabInactive} />
     </Pressable>
   );
 });

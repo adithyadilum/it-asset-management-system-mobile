@@ -30,7 +30,6 @@ import { reportAssetIssue } from '../../services/issues';
 import { toMessage } from '../../lib/errors';
 import { RateLimitError } from '../../constants/api';
 import { AssetDetailsData } from '../../types/asset';
-
 type ScanMode = 'qr' | 'barcode';
 
 /**
@@ -48,25 +47,41 @@ type ScanMode = 'qr' | 'barcode';
  * This models the union the handler actually reads. Everything is optional
  * because the handler already probes each shape in turn.
  */
-type ScannedPoint = { x?: number; y?: number; 0?: number; 1?: number };
-
+type ScannedPoint = {
+  x?: number;
+  y?: number;
+  0?: number;
+  1?: number;
+};
 type ScanGeometry = {
   data: string;
   type: string;
   bounds?: {
-    origin?: { x: number; y: number };
-    size?: { width: number; height: number };
+    origin?: {
+      x: number;
+      y: number;
+    };
+    size?: {
+      width: number;
+      height: number;
+    };
     x?: number;
     y?: number;
     width?: number;
     height?: number;
   };
-  boundingBox?: { x: number; y: number; width: number; height: number };
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
   cornerPoints?: ScannedPoint[];
 };
-
 export default function ScannerScreen() {
-  const { operation } = useLocalSearchParams<{ operation?: string }>();
+  const { operation } = useLocalSearchParams<{
+    operation?: string;
+  }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [mode, setMode] = useState<ScanMode>('qr');
   const operationContext = operation === 'handover' || operation === 'return';
@@ -86,7 +101,6 @@ export default function ScannerScreen() {
   const [issueNote, setIssueNote] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
   const router = useRouter();
-
   useFocusEffect(
     useCallback(() => {
       scannerFocused.current = true;
@@ -98,7 +112,6 @@ export default function ScannerScreen() {
       };
     }, [])
   );
-
   const resumeScanning = () => {
     scanLock.current = false;
     setHasScanned(false);
@@ -115,7 +128,6 @@ export default function ScannerScreen() {
       requestPermission();
     }
   }, [permission, requestPermission]);
-
   const barcodeTypes = [
     'qr',
     'code128',
@@ -125,12 +137,10 @@ export default function ScannerScreen() {
     'ean13',
     'ean8',
   ] as const;
-
   const [layout, setLayout] = useState<{
     width: number;
     height: number;
   } | null>(null);
-
   const handleBarCodeScanned = async (scanResult: ScanGeometry) => {
     if (
       !scannerFocused.current ||
@@ -140,12 +150,9 @@ export default function ScannerScreen() {
       !layout
     )
       return;
-
     const { data, type, bounds, cornerPoints, boundingBox } = scanResult;
-
     if (scanMode === 'qr' && type !== 'qr') return;
     if (scanMode === 'barcode' && type === 'qr') return;
-
     const reticleWidth = scanMode === 'qr' ? 250 : 320;
     const reticleHeight = scanMode === 'qr' ? 250 : 150;
     const reticleX = (layout.width - reticleWidth) / 2;
@@ -154,7 +161,6 @@ export default function ScannerScreen() {
     // Find the center of the barcode
     let barcodeCenterX;
     let barcodeCenterY;
-
     if (bounds && bounds.origin) {
       barcodeCenterX = bounds.origin.x + (bounds.size?.width || 0) / 2;
       barcodeCenterY = bounds.origin.y + (bounds.size?.height || 0) / 2;
@@ -174,7 +180,6 @@ export default function ScannerScreen() {
       barcodeCenterX = sumX / cornerPoints.length;
       barcodeCenterY = sumY / cornerPoints.length;
     }
-
     if (barcodeCenterX !== undefined && barcodeCenterY !== undefined) {
       // Add a generous buffer (60px) to allow scanning if they are mostly inside
       const buffer = 60;
@@ -183,7 +188,6 @@ export default function ScannerScreen() {
         barcodeCenterX <= reticleX + reticleWidth + buffer &&
         barcodeCenterY >= reticleY - buffer &&
         barcodeCenterY <= reticleY + reticleHeight + buffer;
-
       if (!isInsideReticle) {
         return; // Ignore scan entirely
       }
@@ -192,14 +196,11 @@ export default function ScannerScreen() {
       // otherwise it will scan everything on the screen simultaneously.
       return;
     }
-
     scanLock.current = true;
     setHasScanned(true);
-
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
       () => {}
     );
-
     if (scanMode === 'barcode') {
       if (!data || data.trim().length === 0) {
         await Haptics.notificationAsync(
@@ -208,7 +209,12 @@ export default function ScannerScreen() {
         Alert.alert(
           'Invalid barcode',
           'The barcode could not be read clearly.',
-          [{ text: 'Try Again', onPress: () => resumeScanning() }]
+          [
+            {
+              text: 'Try Again',
+              onPress: () => resumeScanning(),
+            },
+          ]
         );
         return;
       }
@@ -219,7 +225,10 @@ export default function ScannerScreen() {
           Haptics.NotificationFeedbackType.Success
         ).catch(() => {});
         Alert.alert('Success', 'Barcode injected successfully', [
-          { text: 'OK', onPress: () => resumeScanning() },
+          {
+            text: 'OK',
+            onPress: () => resumeScanning(),
+          },
         ]);
       } catch (error) {
         await Haptics.notificationAsync(
@@ -229,7 +238,12 @@ export default function ScannerScreen() {
           Alert.alert(
             'Invalid barcode',
             toMessage(error, 'Failed to inject barcode'),
-            [{ text: 'Try Again', onPress: () => resumeScanning() }]
+            [
+              {
+                text: 'Try Again',
+                onPress: () => resumeScanning(),
+              },
+            ]
           );
         }
       } finally {
@@ -237,9 +251,7 @@ export default function ScannerScreen() {
       }
       return;
     }
-
     setIsLoading(true);
-
     try {
       const asset = await fetchScannedAssetDetails(data);
       await Haptics.notificationAsync(
@@ -251,7 +263,9 @@ export default function ScannerScreen() {
             operation === 'handover'
               ? '/operations/handover'
               : '/operations/return',
-          params: { assetId: asset.asset.id },
+          params: {
+            assetId: asset.asset.id,
+          },
         });
       } else setScannedAsset(asset);
     } catch (error) {
@@ -263,8 +277,15 @@ export default function ScannerScreen() {
           'Scan Failed',
           toMessage(error, 'Could not find asset details.'),
           [
-            { text: 'Try Again', onPress: () => resumeScanning() },
-            { text: 'Cancel', onPress: () => router.back(), style: 'cancel' },
+            {
+              text: 'Try Again',
+              onPress: () => resumeScanning(),
+            },
+            {
+              text: 'Cancel',
+              onPress: () => router.back(),
+              style: 'cancel',
+            },
           ]
         );
       }
@@ -294,7 +315,6 @@ export default function ScannerScreen() {
     setCooldownSeconds(error.retryAfterSeconds);
     return true;
   };
-
   const closeBottomSheet = () => {
     if (isSubmittingIssue) return;
     setScannedAsset(null);
@@ -302,16 +322,13 @@ export default function ScannerScreen() {
     setShowReportForm(false);
     setIssueNote('');
   };
-
   const handleSubmitIssue = async () => {
     if (!scannedAsset || !issueNote.trim() || issueLock.current) return;
     issueLock.current = true;
-
     setIsSubmittingIssue(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
       () => {}
     );
-
     try {
       await reportAssetIssue(scannedAsset.asset.id, issueNote.trim());
       await Haptics.notificationAsync(
@@ -332,11 +349,10 @@ export default function ScannerScreen() {
       setIsSubmittingIssue(false);
     }
   };
-
   if (!permission?.granted) {
     return (
-      <View className="flex-1 bg-black items-center justify-center">
-        <Text className="text-white text-center px-8">
+      <View style={nativeStyles.panel}>
+        <Text style={nativeStyles.container}>
           Camera permission is required to scan codes.
         </Text>
         <Pressable onPress={requestPermission} style={styles.permissionButton}>
@@ -345,16 +361,15 @@ export default function ScannerScreen() {
       </View>
     );
   }
-
   return (
     <View
-      className="flex-1 bg-black"
       onLayout={(e) => {
         setLayout({
           width: e.nativeEvent.layout.width,
           height: e.nativeEvent.layout.height,
         });
       }}
+      style={nativeStyles.panel2}
     >
       <CameraView
         style={StyleSheet.absoluteFill}
@@ -369,7 +384,10 @@ export default function ScannerScreen() {
       <View
         style={[
           StyleSheet.absoluteFill,
-          { alignItems: 'center', justifyContent: 'center' },
+          {
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
         ]}
         pointerEvents="none"
       >
@@ -380,11 +398,11 @@ export default function ScannerScreen() {
       </View>
 
       {/* Semi-transparent overlay */}
-      <SafeAreaView className="flex-1 justify-between" pointerEvents="box-none">
+      <SafeAreaView pointerEvents="box-none" style={nativeStyles.container2}>
         {/* Top section — Mode selector + instructions */}
         <Animated.View
           entering={FadeIn.duration(400)}
-          className="items-center mt-6 px-6"
+          style={nativeStyles.container3}
         >
           {/* Mode selector */}
           {!operationContext && (
@@ -452,7 +470,7 @@ export default function ScannerScreen() {
         </Animated.View>
 
         {/* Bottom — Cancel button */}
-        <View className="items-center mb-8">
+        <View style={nativeStyles.container4}>
           <Pressable style={styles.cancelButton} onPress={() => router.back()}>
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
@@ -484,102 +502,98 @@ export default function ScannerScreen() {
               exiting={SlideOutDown.duration(200)}
               style={styles.bottomSheet}
             >
-              <View className="w-12 h-1 bg-slate-200 rounded-full mt-4 mb-2 self-center" />
+              <View style={nativeStyles.panel3} />
 
               {isLoading ? (
-                <View className="py-16 items-center justify-center">
+                <View style={nativeStyles.container5}>
                   <ActivityIndicator size="large" color={Colors.primary} />
-                  <Text className="text-slate-500 mt-4 font-['NotoSans_500Medium']">
+                  <Text style={nativeStyles.container6}>
                     Fetching asset details...
                   </Text>
                 </View>
               ) : scannedAsset ? (
-                <View className="px-6 pb-6 pt-2">
+                <View style={nativeStyles.container7}>
                   {!showReportForm ? (
                     <>
-                      <View className="flex-row justify-between items-start">
+                      <View style={nativeStyles.row}>
                         <View>
-                          <Text className="text-2xl font-['NotoSans_700Bold'] text-slate-900 mb-1">
+                          <Text style={nativeStyles.title}>
                             {scannedAsset.asset.assetTag}
                           </Text>
-                          <View className="flex-row items-center">
+                          <View style={nativeStyles.row2}>
                             <View
-                              className="w-2 h-2 rounded-full mr-2"
-                              style={{
-                                backgroundColor:
-                                  scannedAsset.asset.status.toLowerCase() ===
-                                  'available'
-                                    ? '#10b981'
-                                    : scannedAsset.asset.status.toLowerCase() ===
-                                        'assigned'
-                                      ? '#3b82f6'
-                                      : '#ef4444',
-                              }}
+                              style={[
+                                nativeStyles.container8,
+                                {
+                                  backgroundColor:
+                                    scannedAsset.asset.status.toLowerCase() ===
+                                    'available'
+                                      ? '#10b981'
+                                      : scannedAsset.asset.status.toLowerCase() ===
+                                          'assigned'
+                                        ? '#3b82f6'
+                                        : '#ef4444',
+                                },
+                              ]}
                             />
                             <Text
-                              className="font-['NotoSans_600SemiBold'] text-[15px]"
-                              style={{
-                                color:
-                                  scannedAsset.asset.status.toLowerCase() ===
-                                  'available'
-                                    ? '#10b981'
-                                    : scannedAsset.asset.status.toLowerCase() ===
-                                        'assigned'
-                                      ? '#3b82f6'
-                                      : '#ef4444',
-                              }}
+                              style={[
+                                nativeStyles.text,
+                                {
+                                  color:
+                                    scannedAsset.asset.status.toLowerCase() ===
+                                    'available'
+                                      ? '#10b981'
+                                      : scannedAsset.asset.status.toLowerCase() ===
+                                          'assigned'
+                                        ? '#3b82f6'
+                                        : '#ef4444',
+                                },
+                              ]}
                             >
                               {scannedAsset.asset.status}
                             </Text>
                           </View>
                         </View>
-                        <View className="bg-[#e2e8f0]/60 p-3 rounded-xl">
+                        <View style={nativeStyles.panel4}>
                           <Laptop size={28} color="#1e293b" />
                         </View>
                       </View>
 
-                      <Text className="text-slate-500 font-['NotoSans_600SemiBold'] text-base mt-8 mb-4">
-                        Asset Details
-                      </Text>
+                      <Text style={nativeStyles.text2}>Asset Details</Text>
 
-                      <View className="gap-y-6">
-                        <View className="flex-row items-center">
-                          <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                      <View style={nativeStyles.container9}>
+                        <View style={nativeStyles.row2}>
+                          <View style={nativeStyles.panel5}>
                             <Laptop size={20} color="#64748b" />
                           </View>
                           <View>
-                            <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">
-                              Model
-                            </Text>
-                            <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">
+                            <Text style={nativeStyles.text3}>Model</Text>
+                            <Text style={nativeStyles.text4}>
                               {scannedAsset.model.name}
                             </Text>
                           </View>
                         </View>
 
-                        <View className="flex-row items-center">
-                          <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                        <View style={nativeStyles.row2}>
+                          <View style={nativeStyles.panel5}>
                             <MapPin size={20} color="#64748b" />
                           </View>
                           <View>
-                            <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">
-                              Location
-                            </Text>
-                            <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">
+                            <Text style={nativeStyles.text3}>Location</Text>
+                            <Text style={nativeStyles.text4}>
                               {scannedAsset.location?.name || 'Unknown'}
                             </Text>
                           </View>
                         </View>
 
-                        <View className="flex-row items-center">
-                          <View className="bg-[#f8fafc] p-2.5 rounded-xl mr-4 border border-slate-100">
+                        <View style={nativeStyles.row2}>
+                          <View style={nativeStyles.panel5}>
                             <User size={20} color="#64748b" />
                           </View>
                           <View>
-                            <Text className="text-slate-400 text-xs font-['NotoSans_500Medium'] mb-0.5">
-                              Custodian
-                            </Text>
-                            <Text className="text-slate-800 text-base font-['NotoSans_600SemiBold']">
+                            <Text style={nativeStyles.text3}>Custodian</Text>
+                            <Text style={nativeStyles.text4}>
                               {scannedAsset.assignment?.assignedToUser?.name ||
                                 '-'}
                             </Text>
@@ -590,46 +604,49 @@ export default function ScannerScreen() {
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="View full asset profile"
-                        className="bg-primary rounded-xl py-4 items-center justify-center mt-6"
                         onPress={() => {
                           const assetId = scannedAsset.asset.id;
                           // Keep scanning paused until this screen regains focus.
                           setScannedAsset(null);
                           router.push({
                             pathname: '/asset/[assetId]',
-                            params: { assetId },
+                            params: {
+                              assetId,
+                            },
                           });
                         }}
+                        style={nativeStyles.panel6}
                       >
-                        <Text className="text-white font-sansBold text-base">
+                        <Text style={nativeStyles.text5}>
                           View full asset profile
                         </Text>
                       </Pressable>
 
                       <Pressable
-                        className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-8 active:opacity-90"
                         onPress={() => setShowReportForm(true)}
+                        style={(pressState) => [
+                          nativeStyles.panel7,
+                          pressState.pressed && {
+                            opacity: 0.9,
+                          },
+                        ]}
                       >
-                        <Text className="text-white text-[16px] font-['NotoSans_700Bold']">
-                          Report An Issue
-                        </Text>
+                        <Text style={nativeStyles.text6}>Report An Issue</Text>
                       </Pressable>
                     </>
                   ) : (
                     <>
-                      <View className="flex-row items-center mb-6">
+                      <View style={nativeStyles.row3}>
                         <Pressable
                           onPress={() => setShowReportForm(false)}
-                          className="mr-3 p-1"
+                          style={nativeStyles.padded}
                         >
                           <ChevronLeft size={24} color="#1e293b" />
                         </Pressable>
-                        <Text className="text-xl font-['NotoSans_700Bold'] text-slate-900">
-                          Report an Issue
-                        </Text>
+                        <Text style={nativeStyles.title2}>Report an Issue</Text>
                       </View>
 
-                      <Text className="text-slate-500 text-sm font-['NotoSans_500Medium'] mb-2">
+                      <Text style={nativeStyles.text7}>
                         {scannedAsset.asset.assetTag} ·{' '}
                         {scannedAsset.model.name}
                       </Text>
@@ -647,16 +664,19 @@ export default function ScannerScreen() {
                       />
 
                       <Pressable
-                        className={`bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-6 active:opacity-90 ${isSubmittingIssue || !issueNote.trim() ? 'opacity-50' : ''}`}
                         onPress={handleSubmitIssue}
                         disabled={isSubmittingIssue || !issueNote.trim()}
+                        style={[
+                          nativeStyles.panel8,
+                          isSubmittingIssue || !issueNote.trim()
+                            ? nativeStyles.container10
+                            : null,
+                        ]}
                       >
                         {isSubmittingIssue ? (
                           <ActivityIndicator color="white" />
                         ) : (
-                          <Text className="text-white text-[16px] font-['NotoSans_700Bold']">
-                            Submit Report
-                          </Text>
+                          <Text style={nativeStyles.text6}>Submit Report</Text>
                         )}
                       </Pressable>
                     </>
@@ -670,7 +690,6 @@ export default function ScannerScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   modeSelector: {
     flexDirection: 'row',
@@ -757,5 +776,175 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     minHeight: 140,
     marginTop: 8,
+  },
+});
+const nativeStyles = StyleSheet.create({
+  panel: {
+    flex: 1,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  container: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  panel2: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  container2: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  container3: {
+    alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 24,
+  },
+  container4: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  panel3: {
+    width: 48,
+    height: 4,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 9999,
+    marginTop: 16,
+    marginBottom: 8,
+    alignSelf: 'center',
+  },
+  container5: {
+    paddingVertical: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  container6: {
+    color: '#64748B',
+    marginTop: 16,
+    fontFamily: 'NotoSans_500Medium',
+  },
+  container7: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  title: {
+    fontSize: 24,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  row2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  container8: {
+    width: 8,
+    height: 8,
+    borderRadius: 9999,
+    marginRight: 8,
+  },
+  text: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 15,
+  },
+  panel4: {
+    backgroundColor: 'rgba(226, 232, 240, 0.6)',
+    padding: 12,
+    borderRadius: 14,
+  },
+  text2: {
+    color: '#64748B',
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 16,
+    marginTop: 32,
+    marginBottom: 16,
+  },
+  container9: {
+    rowGap: 24,
+  },
+  panel5: {
+    backgroundColor: '#f8fafc',
+    padding: 10,
+    borderRadius: 14,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  text3: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontFamily: 'NotoSans_500Medium',
+    marginBottom: 2,
+  },
+  text4: {
+    color: '#1E293B',
+    fontSize: 16,
+    fontFamily: 'NotoSans_600SemiBold',
+  },
+  panel6: {
+    backgroundColor: '#040D5A',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  text5: {
+    color: '#FFFFFF',
+    fontFamily: 'NotoSans_700Bold',
+    fontSize: 16,
+  },
+  panel7: {
+    backgroundColor: '#ef4444',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 32,
+  },
+  text6: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'NotoSans_700Bold',
+  },
+  row3: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  padded: {
+    marginRight: 12,
+    padding: 4,
+  },
+  title2: {
+    fontSize: 20,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#0F172A',
+  },
+  text7: {
+    color: '#64748B',
+    fontSize: 14,
+    fontFamily: 'NotoSans_500Medium',
+    marginBottom: 8,
+  },
+  panel8: {
+    backgroundColor: '#ef4444',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  container10: {
+    opacity: 0.5,
   },
 });

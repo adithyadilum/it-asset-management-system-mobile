@@ -29,7 +29,7 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
 
 /**
  * Pressable button with Reanimated spring scale animation on press.
- * Uses plain StyleSheet — no NativeWind className dependency.
+ * Uses native styles and shared color tokens.
  * Supports variant (default/outline/ghost/destructive) and size (sm/md/lg).
  */
 export function Button({

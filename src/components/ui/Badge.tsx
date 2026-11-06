@@ -1,92 +1,90 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import {
   CheckCircle2,
   AlertCircle,
   Wrench,
   Sparkles,
 } from 'lucide-react-native';
-import type { ActivityEventType } from '../../types';
-
 interface BadgeProps {
   type: string;
   label?: string;
-  className?: string;
+  style?: StyleProp<ViewStyle>;
 }
-
-const badgeConfig: Record<
-  ActivityEventType,
-  {
-    label: string;
-    icon: React.ComponentType<any>;
-    bgClass: string;
-    borderClass: string;
-    textClass: string;
-    iconColor: string;
-  }
-> = {
+const variants = {
   assigned: {
     label: 'Assigned',
     icon: CheckCircle2,
-    bgClass: 'bg-slate-50/50',
-    borderClass: 'border-slate-300',
-    textClass: 'text-slate-700',
-    iconColor: '#475569',
+    color: '#475569',
+    background: '#F8FAFC',
+    border: '#CBD5E1',
   },
   lost: {
     label: 'Lost',
     icon: AlertCircle,
-    bgClass: 'bg-amber-50/50',
-    borderClass: 'border-amber-300',
-    textClass: 'text-amber-700',
-    iconColor: '#D97706',
+    color: '#B45309',
+    background: '#FFFBEB',
+    border: '#FCD34D',
   },
   repair: {
     label: 'In Repair',
     icon: Wrench,
-    bgClass: 'bg-purple-50/50',
-    borderClass: 'border-purple-300',
-    textClass: 'text-purple-700',
-    iconColor: '#7C3AED',
+    color: '#7C3AED',
+    background: '#FAF5FF',
+    border: '#D8B4FE',
   },
   disposed: {
     label: 'Disposed',
     icon: CheckCircle2,
-    bgClass: 'bg-slate-100/50',
-    borderClass: 'border-slate-300',
-    textClass: 'text-slate-600',
-    iconColor: '#64748B',
+    color: '#64748B',
+    background: '#F1F5F9',
+    border: '#CBD5E1',
   },
   new: {
     label: 'New',
     icon: Sparkles,
-    bgClass: 'bg-blue-50/50',
-    borderClass: 'border-blue-300',
-    textClass: 'text-blue-700',
-    iconColor: '#2563EB',
+    color: '#2563EB',
+    background: '#EFF6FF',
+    border: '#93C5FD',
   },
 };
-
-export function Badge({ type, label, className = '' }: BadgeProps) {
-  const config = badgeConfig[type as ActivityEventType] ?? {
-    label: type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-    icon: AlertCircle,
-    bgClass: 'bg-slate-50',
-    borderClass: 'border-slate-300',
-    textClass: 'text-slate-700',
-    iconColor: '#64748b',
+export function Badge({ type, label, style }: BadgeProps) {
+  const config = variants[type as keyof typeof variants] || {
+    ...variants.assigned,
+    label: type.replace(/_/g, ' '),
   };
-  if (!config) return null;
-  const IconComponent = config.icon;
-
+  const Icon = config.icon;
   return (
     <View
-      className={`flex-row items-center px-2 py-0.5 rounded-full border ${config.bgClass} ${config.borderClass} ${className}`}
+      style={[
+        styles.badge,
+        { backgroundColor: config.background, borderColor: config.border },
+        style,
+      ]}
     >
-      <IconComponent size={12} color={config.iconColor} strokeWidth={2} />
-      <Text className={`text-xs font-sans ml-1.5 ${config.textClass}`}>
+      <Icon size={12} color={config.color} strokeWidth={2} />
+      <Text numberOfLines={1} style={[styles.text, { color: config.color }]}>
         {label || config.label}
       </Text>
     </View>
   );
 }
+const styles = StyleSheet.create({
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexShrink: 1,
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  text: { fontFamily: 'NotoSans_400Regular', fontSize: 11, flexShrink: 1 },
+});

@@ -17,14 +17,12 @@ import { X, AlertTriangle, Check } from 'lucide-react-native';
 import { Colors } from '../../../constants/colors';
 import { getAssetPresentation } from './AssetRow';
 import type { PendingAssignment } from '../../../services/assets';
-
 interface AcknowledgmentSheetProps {
   assignment: PendingAssignment | null;
   visible: boolean;
   onClose: () => void;
   onConfirm: (assignmentId: number) => Promise<void>;
 }
-
 function formatDate(iso?: string): string {
   if (!iso) return 'Not specified';
   try {
@@ -42,7 +40,7 @@ function formatDate(iso?: string): string {
  * AcknowledgmentSheet — minimalist bottom sheet matching the web app modal design.
  *
  * Custom Modal + Animated for slide-in/out (Expo Go compatible, no native deps).
- * Layout and styling uses global.css tokens via className throughout.
+ * Uses native styles and the shared app palette.
  */
 export function AcknowledgmentSheet({
   assignment,
@@ -53,11 +51,9 @@ export function AcknowledgmentSheet({
   const insets = useSafeAreaInsets();
   const slideAnim = useAnimatedValue(700);
   const backdropAnim = useAnimatedValue(0);
-
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
-
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -88,7 +84,6 @@ export function AcknowledgmentSheet({
       ]).start();
     }
   }, [visible, slideAnim, backdropAnim]);
-
   const handleConfirm = async () => {
     if (!assignment || !acknowledged || confirming) return;
     setConfirming(true);
@@ -102,13 +97,11 @@ export function AcknowledgmentSheet({
       setConfirming(false);
     }
   };
-
   const presentation = getAssetPresentation(
     assignment?.pillar,
     assignment?.name ?? ''
   );
   const IconComponent = presentation.icon;
-
   return (
     <Modal
       visible={visible}
@@ -119,32 +112,49 @@ export function AcknowledgmentSheet({
     >
       {/* Backdrop */}
       <Animated.View
-        style={[sheet.backdrop, { opacity: backdropAnim }]}
+        style={[
+          sheet.backdrop,
+          {
+            opacity: backdropAnim,
+          },
+        ]}
         pointerEvents={visible ? 'auto' : 'none'}
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      {/* Sheet — platform shadow only via StyleSheet, rest via className */}
+      {/* Native bottom sheet */}
       <Animated.View
-        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl"
         style={[
-          sheet.shadow,
-          { paddingBottom: insets.bottom + 20 },
-          { transform: [{ translateY: slideAnim }] },
+          nativeStyles.panel,
+          [
+            sheet.shadow,
+            {
+              paddingBottom: insets.bottom + 20,
+            },
+            {
+              transform: [
+                {
+                  translateY: slideAnim,
+                },
+              ],
+            },
+          ],
         ]}
       >
         {/* Drag handle */}
-        <View className="self-center w-9 h-1 bg-slate-200 rounded-full mt-2.5 mb-1" />
+        <View style={nativeStyles.panel2} />
 
         {/* ── Header ── */}
-        <View className="flex-row items-center justify-between px-5 pt-3 pb-3">
-          <Text className="text-[17px] font-sansBold text-slate-800">
-            Accept Asset Assignment
-          </Text>
+        <View style={nativeStyles.row}>
+          <Text style={nativeStyles.title}>Accept Asset Assignment</Text>
           <Pressable
-            className="p-1"
-            style={({ pressed }) => pressed && { opacity: 0.5 }}
+            style={({ pressed }) => [
+              nativeStyles.padded,
+              pressed && {
+                opacity: 0.5,
+              },
+            ]}
             onPress={onClose}
             accessibilityLabel="Close"
           >
@@ -153,7 +163,6 @@ export function AcknowledgmentSheet({
         </View>
 
         <ScrollView
-          className="flex-1"
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingBottom: 8,
@@ -161,51 +170,41 @@ export function AcknowledgmentSheet({
           }}
           showsVerticalScrollIndicator={false}
           bounces={false}
+          style={nativeStyles.container}
         >
           {/* ── Asset identity & details block ── */}
-          <View className="bg-slate-50 border border-slate-200/60 rounded-2xl p-5 mb-1">
+          <View style={nativeStyles.panel3}>
             {/* Icon and Name */}
-            <View className="flex-row items-center gap-3.5 mb-4">
+            <View style={nativeStyles.row2}>
               <IconComponent size={32} color="#0A1A8A" strokeWidth={1.5} />
-              <Text
-                className="text-[19px] font-sansBold text-slate-900 flex-1"
-                numberOfLines={1}
-              >
+              <Text numberOfLines={1} style={nativeStyles.title2}>
                 {assignment?.name ?? '—'}
               </Text>
             </View>
 
             {/* Key-Value details */}
-            <View className="gap-2.5">
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Asset ID:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
+            <View style={nativeStyles.container2}>
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Asset ID:</Text>
+                <Text style={nativeStyles.text2}>
                   {assignment?.tagId ?? '—'}
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Condition:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Condition:</Text>
+                <Text style={nativeStyles.text2}>
                   {assignment?.condition ?? 'Unknown'}
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Assigned By:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Assigned By:</Text>
+                <Text style={nativeStyles.text2}>
                   {assignment?.assignedByName ?? '—'}
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="w-28 text-sm font-sans text-slate-500">
-                  Date:
-                </Text>
-                <Text className="flex-1 text-sm font-sans text-slate-800">
+              <View style={nativeStyles.row3}>
+                <Text style={nativeStyles.text}>Date:</Text>
+                <Text style={nativeStyles.text2}>
                   {formatDate(assignment?.assignedDate)}
                 </Text>
               </View>
@@ -213,7 +212,7 @@ export function AcknowledgmentSheet({
           </View>
 
           {/* ── Policy disclaimer ── */}
-          <Text className="text-sm font-sans text-slate-500 leading-relaxed mt-1">
+          <Text style={nativeStyles.text3}>
             By accepting this equipment, you acknowledge that you have received
             it in the condition stated above and agree to abide by the TIQRI IT
             Acceptable Use Policy.
@@ -221,72 +220,83 @@ export function AcknowledgmentSheet({
 
           {/* ── Acknowledgment checkbox ── */}
           <Pressable
-            className="flex-row items-start gap-3 mt-3 py-1"
-            style={({ pressed }) => pressed && { opacity: 0.8 }}
+            style={({ pressed }) => [
+              nativeStyles.row4,
+              pressed && {
+                opacity: 0.8,
+              },
+            ]}
             onPress={() => setAcknowledged((v) => !v)}
             accessibilityRole="checkbox"
-            accessibilityState={{ checked: acknowledged }}
+            accessibilityState={{
+              checked: acknowledged,
+            }}
           >
             <View
-              className={`w-5 h-5 rounded-md border items-center justify-center mt-0.5 ${
-                acknowledged
-                  ? 'border-slate-800 bg-slate-800'
-                  : 'border-slate-300 bg-white'
-              }`}
+              style={[
+                nativeStyles.container3,
+                acknowledged ? nativeStyles.panel4 : nativeStyles.panel5,
+              ]}
             >
               {acknowledged && (
                 <Check size={12} color="#FFFFFF" strokeWidth={3.5} />
               )}
             </View>
-            <Text className="flex-1 text-[13px] font-sansBold text-slate-800 leading-5">
+            <Text style={nativeStyles.text4}>
               I acknowledge and accept responsibility for this asset.
             </Text>
           </Pressable>
 
           {/* ── Error message ── */}
           {confirmError && (
-            <View className="flex-row items-center gap-1.5 bg-destructive/10 rounded-lg px-3 py-2.5 mt-1">
+            <View style={nativeStyles.row5}>
               <AlertTriangle
                 size={13}
                 color={Colors.destructive}
                 strokeWidth={2}
               />
-              <Text className="flex-1 text-xs text-destructive leading-[17px]">
-                {confirmError}
-              </Text>
+              <Text style={nativeStyles.text5}>{confirmError}</Text>
             </View>
           )}
 
           {/* ── Action buttons ── */}
-          <View className="flex-row items-center gap-3 mt-4">
-            {/* Report Issue — outline */}
-            {/* TODO: Implement report issue routing instead of just closing the sheet */}
+          <View style={nativeStyles.row6}>
+            {/* Cancel keeps the pending assignment unchanged. */}
             <Pressable
-              className="flex-1 bg-white border border-slate-200 py-3 rounded-xl items-center justify-center"
-              style={({ pressed }) => pressed && { opacity: 0.7 }}
+              style={({ pressed }) => [
+                nativeStyles.panel6,
+                pressed && {
+                  opacity: 0.7,
+                },
+              ]}
               onPress={onClose}
             >
-              <Text className="text-slate-800 text-sm font-sansBold text-center px-1">
-                Report Issue
-              </Text>
+              <Text style={nativeStyles.text6}>Cancel</Text>
             </Pressable>
 
             {/* Confirm Receipt — solid */}
             <Pressable
-              className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                acknowledged && !confirming ? 'bg-[#707FA5]' : 'bg-[#707FA5]/40'
-              }`}
               disabled={!acknowledged || confirming}
-              style={({ pressed }) =>
-                pressed && acknowledged && !confirming && { opacity: 0.8 }
-              }
+              style={({ pressed }) => [
+                [
+                  nativeStyles.container4,
+                  acknowledged && !confirming
+                    ? nativeStyles.panel7
+                    : nativeStyles.panel8,
+                ],
+                pressed &&
+                  acknowledged &&
+                  !confirming && {
+                    opacity: 0.8,
+                  },
+              ]}
               onPress={handleConfirm}
             >
-              <View className="flex-row items-center justify-center gap-1.5">
+              <View style={nativeStyles.row7}>
                 {confirming && (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 )}
-                <Text className="text-white text-sm font-sansBold text-center">
+                <Text style={nativeStyles.text7}>
                   {confirming ? 'Confirming…' : 'Confirm Receipt'}
                 </Text>
               </View>
@@ -297,7 +307,6 @@ export function AcknowledgmentSheet({
     </Modal>
   );
 }
-
 const sheet = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFill,
@@ -308,11 +317,196 @@ const sheet = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -3 },
+        shadowOffset: {
+          width: 0,
+          height: -3,
+        },
         shadowOpacity: 0.1,
         shadowRadius: 12,
       },
-      android: { elevation: 20 },
+      android: {
+        elevation: 20,
+      },
     }),
+  },
+});
+const nativeStyles = StyleSheet.create({
+  panel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+  },
+  panel2: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 9999,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  title: {
+    fontSize: 17,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#1E293B',
+  },
+  padded: {
+    padding: 4,
+  },
+  container: {
+    flex: 1,
+  },
+  panel3: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.6)',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 4,
+  },
+  row2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 16,
+  },
+  title2: {
+    fontSize: 19,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#0F172A',
+    flex: 1,
+  },
+  container2: {
+    gap: 10,
+  },
+  row3: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  text: {
+    width: 112,
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#64748B',
+  },
+  text2: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#1E293B',
+  },
+  text3: {
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#64748B',
+    lineHeight: 22,
+    marginTop: 4,
+  },
+  row4: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginTop: 12,
+    paddingVertical: 4,
+  },
+  container3: {
+    width: 20,
+    height: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  panel4: {
+    borderColor: '#1E293B',
+    backgroundColor: '#1E293B',
+  },
+  panel5: {
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+  },
+  text4: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#1E293B',
+    lineHeight: 20,
+  },
+  row5: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  text5: {
+    flex: 1,
+    fontSize: 12,
+    color: '#EF4444',
+    lineHeight: 17,
+  },
+  row6: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 16,
+  },
+  panel6: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  text6: {
+    color: '#1E293B',
+    fontSize: 14,
+    fontFamily: 'NotoSans_700Bold',
+    textAlign: 'center',
+    paddingHorizontal: 4,
+  },
+  container4: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  panel7: {
+    backgroundColor: Colors.primary,
+  },
+  panel8: {
+    backgroundColor: 'rgba(4, 13, 90, 0.4)',
+  },
+  row7: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  text7: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'NotoSans_700Bold',
+    textAlign: 'center',
   },
 });

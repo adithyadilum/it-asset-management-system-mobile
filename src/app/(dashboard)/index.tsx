@@ -2,6 +2,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -12,49 +13,60 @@ import {
   ClipboardList,
   PackagePlus,
   Search,
-  ScanLine,
   Timer,
   Wrench,
 } from 'lucide-react-native';
 import { Header } from '../../components/dashboard/Header';
+import { ScannerCard } from '../../components/dashboard/ScannerCard';
 import { StateMessage } from '../../components/ui/StateMessage';
 import { TaskRow } from '../../components/operations/TaskRow';
 import { Colors } from '../../constants/colors';
 import { useTasks } from '../../hooks/useTasks';
 import type { TaskKind } from '../../types/operations';
+
+const metrics = [
+  {
+    kind: 'handovers',
+    label: 'Pending handovers',
+    icon: PackagePlus,
+    color: '#2563EB',
+    tint: '#EFF6FF',
+  },
+  {
+    kind: 'returns',
+    label: 'Returns due',
+    icon: Timer,
+    color: '#D97706',
+    tint: '#FFFBEB',
+  },
+  {
+    kind: 'inspections',
+    label: 'Condition checks',
+    icon: ClipboardCheck,
+    color: '#7C3AED',
+    tint: '#F5F3FF',
+  },
+  {
+    kind: 'maintenance',
+    label: 'Open maintenance',
+    icon: Wrench,
+    color: '#059669',
+    tint: '#ECFDF5',
+  },
+] satisfies {
+  kind: TaskKind;
+  label: string;
+  icon: typeof Timer;
+  color: string;
+  tint: string;
+}[];
+
 export default function DashboardScreen() {
   const router = useRouter();
   const { result, loading, refreshing, error, refresh } = useTasks({
-    pageSize: 5,
+    pageSize: 3,
   });
-  const metrics = [
-    {
-      kind: 'handovers' as TaskKind,
-      label: 'Pending handovers',
-      icon: PackagePlus,
-    },
-    { kind: 'returns' as TaskKind, label: 'Returns due', icon: Timer },
-    {
-      kind: 'inspections' as TaskKind,
-      label: 'Condition checks',
-      icon: ClipboardCheck,
-    },
-    {
-      kind: 'maintenance' as TaskKind,
-      label: 'Open maintenance',
-      icon: Wrench,
-    },
-  ];
   const quick = [
-    {
-      label: 'Scan',
-      icon: ScanLine,
-      press: () =>
-        router.push({
-          pathname: '/(dashboard)/scanner',
-          params: { operation: '' },
-        }),
-    },
     {
       label: 'Find asset',
       icon: Search,
@@ -80,9 +92,10 @@ export default function DashboardScreen() {
     },
   ];
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.backgroundSubtle }}>
+    <View style={styles.screen}>
       <Header />
       <ScrollView
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -90,61 +103,30 @@ export default function DashboardScreen() {
             tintColor={Colors.primary}
           />
         }
-        contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 32 }}
       >
-        <View style={{ gap: 7 }}>
-          <Text
-            style={{
-              fontFamily: 'NotoSans_700Bold',
-              fontSize: 26,
-              color: Colors.foreground,
-            }}
-          >
-            Operations at a glance
-          </Text>
-          <Text
-            style={{
-              fontFamily: 'NotoSans_400Regular',
-              fontSize: 13,
-              lineHeight: 20,
-              color: Colors.mutedForeground,
-            }}
-          >
-            {result
-              ? `${Object.values(result.counts).reduce((sum, n) => sum + n, 0)} tasks need your team's attention.`
-              : 'Your assets, handovers and returns in one place.'}
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <ScannerCard />
+        <View style={styles.quickRow}>
           {quick.map((action) => (
             <Pressable
               key={action.label}
               accessibilityRole="button"
               accessibilityLabel={action.label}
               onPress={action.press}
-              style={({ pressed }) => ({
-                flex: 1,
-                alignItems: 'center',
-                gap: 8,
-                paddingVertical: 16,
-                borderWidth: 1,
-                borderColor: Colors.border,
-                borderRadius: 14,
-                backgroundColor: pressed ? Colors.muted : Colors.card,
-              })}
+              style={styles.quick}
+              android_ripple={{ color: Colors.muted }}
             >
               <action.icon size={22} color={Colors.primary} />
-              <Text
-                style={{
-                  fontFamily: 'NotoSans_600SemiBold',
-                  fontSize: 11,
-                  color: Colors.primary,
-                }}
-              >
-                {action.label}
-              </Text>
+              <Text style={styles.quickLabel}>{action.label}</Text>
             </Pressable>
           ))}
+        </View>
+        <View style={styles.heading}>
+          <Text style={styles.sectionTitle}>Operations at a glance</Text>
+          <Text style={styles.subtitle}>
+            {result
+              ? `${Object.values(result.counts).reduce((sum, n) => sum + n, 0)} tasks need your team's attention`
+              : 'Your daily work, in one place'}
+          </Text>
         </View>
         {error ? (
           <StateMessage type="error" message={error} onRetry={refresh} />
@@ -152,130 +134,61 @@ export default function DashboardScreen() {
         {loading && !result ? (
           <StateMessage type="loading" message="Loading your work queue..." />
         ) : null}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+        <View style={styles.grid}>
           {metrics.map((metric) => (
-            <Pressable
-              key={metric.kind}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${metric.label}`}
-              onPress={() =>
-                router.push({
-                  pathname: '/(dashboard)/tasks',
-                  params: { kind: metric.kind },
-                })
-              }
-              style={({ pressed }) => ({
-                width: '48%',
-                flexGrow: 1,
-                minHeight: 130,
-                gap: 10,
-                padding: 16,
-                borderWidth: 1,
-                borderColor: Colors.border,
-                borderRadius: 16,
-                backgroundColor: pressed ? Colors.muted : Colors.card,
-              })}
-            >
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
+            <View key={metric.kind} style={styles.metricCell}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${metric.label}`}
+                style={styles.metric}
+                android_ripple={{ color: Colors.muted }}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(dashboard)/tasks',
+                    params: { kind: metric.kind },
+                  })
+                }
               >
-                <metric.icon size={21} color={Colors.primary} />
-                <Text
-                  style={{
-                    fontFamily: 'NotoSans_700Bold',
-                    fontSize: 28,
-                    color: Colors.foreground,
-                  }}
+                <View
+                  style={[styles.metricIcon, { backgroundColor: metric.tint }]}
                 >
+                  <metric.icon size={22} color={metric.color} />
+                </View>
+                <Text style={styles.value}>
                   {result ? result.counts[metric.kind] : '\u2014'}
                 </Text>
-              </View>
-              <Text
-                style={{
-                  fontFamily: 'NotoSans_500Medium',
-                  fontSize: 12,
-                  color: Colors.mutedForeground,
-                }}
-              >
-                {metric.label}
-              </Text>
-            </Pressable>
+                <Text style={styles.metricLabel}>{metric.label}</Text>
+              </Pressable>
+            </View>
           ))}
         </View>
-        <View style={{ gap: 12 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: 'NotoSans_700Bold',
-                fontSize: 17,
-                color: Colors.foreground,
-              }}
-            >
-              Needs attention
-            </Text>
+        <View style={styles.attention}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Needs attention</Text>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="View all tasks"
+              hitSlop={8}
+              style={styles.viewAll}
               onPress={() =>
                 router.push({
                   pathname: '/(dashboard)/tasks',
                   params: { kind: 'all' },
                 })
               }
-              style={{ paddingVertical: 10, paddingLeft: 12 }}
             >
-              <Text
-                style={{
-                  fontFamily: 'NotoSans_600SemiBold',
-                  fontSize: 12,
-                  color: Colors.primary,
-                }}
-              >
-                View all tasks
-              </Text>
+              <Text style={styles.link}>View all tasks</Text>
             </Pressable>
           </View>
           {result?.data.map((task) => (
             <TaskRow key={task.id} task={task} />
           ))}
           {result && !result.data.length ? (
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: Colors.border,
-                borderRadius: 16,
-                backgroundColor: Colors.card,
-                padding: 24,
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
+            <View style={styles.empty}>
               <ClipboardList size={28} color={Colors.success} />
-              <Text
-                style={{
-                  fontFamily: 'NotoSans_600SemiBold',
-                  color: Colors.foreground,
-                }}
-              >
-                All caught up
-              </Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: Colors.mutedForeground,
-                  textAlign: 'center',
-                }}
-              >
-                New handovers, returns and maintenance work will appear here.
+              <Text style={styles.sectionTitle}>All caught up</Text>
+              <Text style={styles.subtitle}>
+                New work will appear here when it needs your attention.
               </Text>
             </View>
           ) : null}
@@ -284,3 +197,92 @@ export default function DashboardScreen() {
     </View>
   );
 }
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: Colors.backgroundSubtle },
+  content: { padding: 20, gap: 20, paddingBottom: 32 },
+  quickRow: { flexDirection: 'row', gap: 10 },
+  quick: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    backgroundColor: Colors.card,
+    overflow: 'hidden',
+  },
+  quickLabel: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 12,
+    color: Colors.primary,
+  },
+  heading: { gap: 5 },
+  sectionTitle: {
+    fontFamily: 'NotoSans_700Bold',
+    fontSize: 17,
+    color: Colors.foreground,
+  },
+  subtitle: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    lineHeight: 19,
+    color: Colors.mutedForeground,
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', margin: -6 },
+  metricCell: { width: '50%', padding: 6 },
+  metric: {
+    flex: 1,
+    minHeight: 150,
+    gap: 6,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    overflow: 'hidden',
+  },
+  metricIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
+  value: {
+    fontFamily: 'NotoSans_700Bold',
+    fontSize: 28,
+    lineHeight: 36,
+    color: Colors.foreground,
+  },
+  metricLabel: {
+    fontFamily: 'NotoSans_400Regular',
+    fontSize: 12,
+    color: Colors.mutedForeground,
+  },
+  attention: { gap: 10 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  viewAll: { minHeight: 44, justifyContent: 'center' },
+  link: {
+    fontFamily: 'NotoSans_600SemiBold',
+    fontSize: 12,
+    color: Colors.primary,
+  },
+  empty: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    padding: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+});

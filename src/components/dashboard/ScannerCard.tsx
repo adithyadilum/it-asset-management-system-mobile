@@ -1,47 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { ScanLine } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 /**
- * Large pressable scanner CTA card (~40% of viewport).
- * Navy gradient feel, ScanLine lucide icon, press animation via Reanimated.
+ * Primary scanner action with native press feedback.
  */
 export function ScannerCard() {
   const router = useRouter();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() }],
-  }));
-
-  const handlePressIn = () => {
-    scale.set(withSpring(0.97, { damping: 15, stiffness: 300 }));
-  };
-
-  const handlePressOut = () => {
-    scale.set(withSpring(1, { damping: 15, stiffness: 300 }));
-  };
+  const [pressed, setPressed] = useState(false);
 
   const handlePress = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/(dashboard)/scanner');
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    router.push({
+      pathname: '/(dashboard)/scanner',
+      params: { operation: '' },
+    });
   };
 
   return (
-    <AnimatedPressable
-      style={[animatedStyle, styles.card]}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Launch Scanner"
+      style={[
+        styles.card,
+        pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
+      ]}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
       onPress={handlePress}
     >
       {/* Navy background with subtle gradient effect using layered views */}
@@ -60,7 +48,7 @@ export function ScannerCard() {
           Instantly scan asset barcodes{'\n'}and QR codes
         </Text>
       </View>
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 

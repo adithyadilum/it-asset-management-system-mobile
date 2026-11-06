@@ -8,7 +8,7 @@ interface AvatarProps {
   imageUrl?: string;
   initials: string;
   size?: AvatarSize;
-  className?: string;
+  style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
 }
 
 const sizeMap: Record<AvatarSize, number> = {
@@ -27,17 +27,35 @@ const fontSizeMap: Record<AvatarSize, number> = {
  * Circular avatar with image or fallback initials.
  * Navy background with white text for initials fallback.
  */
-export function Avatar({ imageUrl, initials, size = 'md', className = '' }: AvatarProps) {
+export function Avatar({
+  imageUrl,
+  initials,
+  size = 'md',
+  style,
+}: AvatarProps) {
   const dimension = sizeMap[size];
   const fontSize = fontSizeMap[size];
 
   if (imageUrl) {
     return (
-      <Image
-        source={{ uri: imageUrl }}
-        style={[styles.image, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
-        className={className}
-      />
+      <View
+        style={[
+          styles.fallback,
+          {
+            width: dimension,
+            height: dimension,
+            borderRadius: dimension / 2,
+            overflow: 'hidden',
+          },
+          style,
+        ]}
+      >
+        <Image
+          source={{ uri: imageUrl }}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+      </View>
     );
   }
 
@@ -45,6 +63,7 @@ export function Avatar({ imageUrl, initials, size = 'md', className = '' }: Avat
     <View
       style={[
         styles.fallback,
+        style,
         {
           width: dimension,
           height: dimension,
@@ -52,7 +71,6 @@ export function Avatar({ imageUrl, initials, size = 'md', className = '' }: Avat
           backgroundColor: Colors.primary,
         },
       ]}
-      className={className}
     >
       <Text style={[styles.initialsText, { fontSize }]}>
         {initials.toUpperCase()}

@@ -197,10 +197,8 @@ export default function InventoryScreen() {
                   params: { assetId: item.id },
                 })
               }
-              style={({ pressed }) => [
-                styles.row,
-                pressed && { backgroundColor: Colors.muted },
-              ]}
+              style={styles.row}
+              android_ripple={{ color: Colors.muted }}
             >
               <AssetImage uri={item.imageUrl} />
               <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
@@ -209,7 +207,7 @@ export default function InventoryScreen() {
                     flexDirection: 'row',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
+
                     gap: 6,
                   }}
                 >
@@ -237,7 +235,7 @@ export default function InventoryScreen() {
                     }}
                   >
                     <MapPin size={11} color={Colors.mutedForeground} />
-                    <Text style={styles.meta} numberOfLines={1}>
+                    <Text style={[styles.meta, { flex: 1 }]} numberOfLines={1}>
                       {item.location}
                     </Text>
                   </View>

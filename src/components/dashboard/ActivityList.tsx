@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Activity, RefreshCw } from 'lucide-react-native';
 import { ActivityItem } from './ActivityItem';
 import { Colors } from '../../constants/colors';
@@ -21,34 +21,43 @@ export function ActivityList() {
   React.useEffect(() => {
     load();
   }, [load]);
-
   return (
     <View>
       {/* Section header */}
-      <View className="flex-row items-center justify-between mb-0.5">
-        <View className="flex-row items-center">
-          <Activity size={16} color={Colors.foreground} strokeWidth={2} style={{ marginRight: 6 }} />
-          <Text className="text-[17px] font-sansBold text-foreground">Recent Activity</Text>
+      <View style={nativeStyles.row}>
+        <View style={nativeStyles.row2}>
+          <Activity
+            size={16}
+            color={Colors.foreground}
+            strokeWidth={2}
+            style={{
+              marginRight: 6,
+            }}
+          />
+          <Text style={nativeStyles.title}>Recent Activity</Text>
         </View>
 
         {/* Refresh button */}
         <Pressable
           onPress={load}
-          className="p-1.5 active:opacity-60"
           disabled={loading}
+          style={(pressState) => [
+            nativeStyles.padded,
+            pressState.pressed && {
+              opacity: 0.6,
+            },
+          ]}
         >
           <RefreshCw size={14} color={Colors.mutedForeground} strokeWidth={2} />
         </Pressable>
       </View>
 
-      <Text className="text-[11px] font-sans text-muted-foreground mb-3">
+      <Text style={nativeStyles.text}>
         Live audit trail from the IT management system
       </Text>
 
       {/* Loading state */}
-      {loading && (
-        <StateMessage type="loading" message="Loading activity…" />
-      )}
+      {loading && <StateMessage type="loading" message="Loading activity…" />}
 
       {/* Error state */}
       {!loading && error && (
@@ -61,16 +70,50 @@ export function ActivityList() {
       )}
 
       {/* Activity items */}
-      {!loading && !error && entries.map((entry) => (
-        <ActivityItem key={entry.id} entry={entry} />
-      ))}
+      {!loading &&
+        !error &&
+        entries.map((entry) => <ActivityItem key={entry.id} entry={entry} />)}
 
       {/* Footer text */}
       {!loading && !error && entries.length > 0 && (
-        <Text className="text-[12px] font-sans text-muted-foreground text-center mt-4 mb-2">
+        <Text style={nativeStyles.text2}>
           You can view the full audit log on the web portal
         </Text>
       )}
     </View>
   );
 }
+const nativeStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  row2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 17,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#0F172A',
+  },
+  padded: {
+    padding: 6,
+  },
+  text: {
+    fontSize: 11,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#64748B',
+    marginBottom: 12,
+  },
+  text2: {
+    fontSize: 12,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+});

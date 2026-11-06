@@ -2,14 +2,20 @@ import { logger } from '../lib/logger';
 import { useCallback, useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { ActivityIndicator, View, Alert, Image, AppState } from 'react-native';
+import {
+  ActivityIndicator,
+  View,
+  Alert,
+  Image,
+  AppState,
+  StyleSheet,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { NotoSans_400Regular } from '@expo-google-fonts/noto-sans/400Regular';
 import { NotoSans_500Medium } from '@expo-google-fonts/noto-sans/500Medium';
 import { NotoSans_600SemiBold } from '@expo-google-fonts/noto-sans/600SemiBold';
 import { NotoSans_700Bold } from '@expo-google-fonts/noto-sans/700Bold';
-
 import { AuthContext } from '../context/auth-context';
 import { NotificationsProvider } from '../context/notifications-context';
 import { decodeJwt, isStoredTokenUsable } from '../lib/jwt';
@@ -19,11 +25,9 @@ import {
   getStoredToken,
   setUnauthenticatedHandler,
 } from '../constants/api';
-import '../../global.css';
 
 // Prevent the splash screen from hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     NotoSans_400Regular,
@@ -31,11 +35,9 @@ export default function RootLayout() {
     NotoSans_600SemiBold,
     NotoSans_700Bold,
   });
-
   const fontsReady = loaded || Boolean(error);
   const [isAuthLoading, setAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   const segments = useSegments();
   const router = useRouter();
 
@@ -55,7 +57,6 @@ export default function RootLayout() {
         .finally(() => setAuthLoading(false)),
     []
   );
-
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -68,7 +69,6 @@ export default function RootLayout() {
     });
     return () => subscription.remove();
   }, [checkAuth]);
-
   const signOut = useCallback(async () => {
     await clearStoredToken();
     setIsAuthenticated(false);
@@ -96,25 +96,20 @@ export default function RootLayout() {
       unsubscribe: (channel: string) => void;
       disconnect: () => void;
     };
-
     let pusher: PusherClient | null = null;
     let cancelled = false;
     let channelName = '';
-
     async function setupPusherListener() {
       try {
         const key = await getStoredToken();
         if (!key || cancelled) return;
-
         const payload = decodeJwt(key);
         if (!payload || !payload.jti) {
           logger.warn('Unable to decode JWT JTI for revocation listener.');
           return;
         }
-
         const pusherKey = process.env.EXPO_PUBLIC_PUSHER_KEY;
         const pusherCluster = process.env.EXPO_PUBLIC_PUSHER_CLUSTER;
-
         if (!pusherKey || !pusherCluster) {
           logger.warn('Pusher environment variables are not configured.');
           return;
@@ -124,7 +119,6 @@ export default function RootLayout() {
         // eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro's CommonJS interop is required here.
         const PusherModule = require('pusher-js');
         let PusherConstructor = PusherModule;
-
         if (PusherModule && typeof PusherModule.default === 'function') {
           PusherConstructor = PusherModule.default;
         } else if (
@@ -136,7 +130,6 @@ export default function RootLayout() {
         } else if (PusherModule && typeof PusherModule.Pusher === 'function') {
           PusherConstructor = PusherModule.Pusher;
         }
-
         if (typeof PusherConstructor !== 'function') {
           logger.error(
             'Failed to resolve Pusher constructor. Module:',
@@ -144,7 +137,6 @@ export default function RootLayout() {
           );
           return;
         }
-
         const client = new PusherConstructor(pusherKey, {
           cluster: pusherCluster,
           forceTLS: true,
@@ -154,7 +146,9 @@ export default function RootLayout() {
           channelAuthorization: {
             endpoint: `${getApiUrl()}/api/v1/pusher/auth`,
             transport: 'ajax',
-            headers: { Authorization: `Bearer ${key}` },
+            headers: {
+              Authorization: `Bearer ${key}`,
+            },
           },
         });
         pusher = client;
@@ -187,9 +181,7 @@ export default function RootLayout() {
         logger.error('Error initializing Pusher listener:', error);
       }
     }
-
     setupPusherListener();
-
     return () => {
       cancelled = true;
       if (pusher) {
@@ -200,18 +192,14 @@ export default function RootLayout() {
       }
     };
   }, [isAuthenticated, router]);
-
   useEffect(() => {
     if (!isAuthLoading && fontsReady) {
       SplashScreen.hideAsync();
     }
   }, [isAuthLoading, fontsReady]);
-
   useEffect(() => {
     if (isAuthLoading || !fontsReady) return;
-
     const inAuthGroup = segments[0] === '(auth)';
-
     if (!isAuthenticated && !inAuthGroup) {
       // Redirect to the sign-in page.
       router.replace('/(auth)/connect');
@@ -220,31 +208,60 @@ export default function RootLayout() {
       router.replace('/(dashboard)');
     }
   }, [isAuthenticated, isAuthLoading, fontsReady, segments, router]);
-
   const isReady = fontsReady && !isAuthLoading;
-
   if (!isReady) {
     return (
-      <View className="flex-1 items-center justify-center bg-background gap-y-8">
+      <View style={nativeStyles.panel}>
         <Image
           source={require('../../assets/icon.png')}
-          style={{ width: 120, height: 120, borderRadius: 24 }}
+          style={{
+            width: 120,
+            height: 120,
+            borderRadius: 24,
+          }}
           resizeMode="contain"
         />
         <ActivityIndicator size="large" />
       </View>
     );
   }
-
   return (
-    <AuthContext.Provider value={{ setIsAuthenticated, signOut }}>
+    <AuthContext.Provider
+      value={{
+        setIsAuthenticated,
+        signOut,
+      }}
+    >
       <NotificationsProvider key={isAuthenticated ? 'linked' : 'unlinked'}>
         <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen
+            name="(auth)"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="(dashboard)"
+            options={{
+              headerShown: false,
+            }}
+          />
         </Stack>
       </NotificationsProvider>
     </AuthContext.Provider>
   );
 }
+const nativeStyles = StyleSheet.create({
+  panel: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    rowGap: 32,
+  },
+});

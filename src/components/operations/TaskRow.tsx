@@ -23,20 +23,22 @@ export function TaskRow({ task }: { task: OperationTask }) {
             params: { assetId: task.assetId },
           });
       }}
-      style={({ pressed }) => ({
+      android_ripple={{ color: Colors.muted }}
+      style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
         padding: 15,
-        backgroundColor: pressed ? Colors.muted : Colors.card,
+        backgroundColor: Colors.card,
         borderColor: Colors.border,
         borderWidth: 1,
         borderRadius: 14,
-      })}
+      }}
     >
       <AssetImage uri={task.imageUrl} />
       <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
         <Text
+          numberOfLines={1}
           style={{
             fontFamily: 'NotoSans_600SemiBold',
             fontSize: 10,
@@ -58,26 +60,27 @@ export function TaskRow({ task }: { task: OperationTask }) {
           {task.name}
         </Text>
         <Text
-          numberOfLines={2}
+          numberOfLines={1}
           style={{
-            fontFamily: 'NotoSans_400Regular',
-            fontSize: 12,
-            lineHeight: 18,
+            fontSize: 11,
+            lineHeight: 17,
             color: Colors.mutedForeground,
           }}
         >
-          {task.detail}
+          {task.custodian || task.detail}
         </Text>
-        {task.custodian ? (
+        {task.dueDate ? (
           <Text
             numberOfLines={1}
-            style={{ fontSize: 11, color: Colors.mutedForeground }}
+            style={{
+              fontSize: 10,
+              color:
+                task.kind === 'returns' &&
+                task.detail.toLowerCase().includes('overdue')
+                  ? Colors.destructive
+                  : Colors.primary,
+            }}
           >
-            {task.custodian}
-          </Text>
-        ) : null}
-        {task.dueDate ? (
-          <Text style={{ fontSize: 11, color: Colors.primary }}>
             Due {formatProfileDate(task.dueDate)}
           </Text>
         ) : null}

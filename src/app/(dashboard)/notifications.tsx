@@ -38,7 +38,6 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useNotifications } from '../../context/notifications-context';
 import { Colors } from '../../constants/colors';
-
 function formatTimeAgo(dateString: string) {
   try {
     const date = new Date(dateString);
@@ -47,7 +46,6 @@ function formatTimeAgo(dateString: string) {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
@@ -61,41 +59,82 @@ function formatTimeAgo(dateString: string) {
     return '';
   }
 }
-
 interface EventTypeConfig {
   icon: React.ComponentType<any>;
   color: string;
   bg: string;
 }
-
 const getEventTypeConfig = (eventType: string): EventTypeConfig => {
   switch (eventType) {
     case 'WARRANTY_EXPIRY':
     case 'SOFTWARE_LICENSE_RENEWAL':
-      return { icon: Clock, color: Colors.warning, bg: Colors.warningLight };
+      return {
+        icon: Clock,
+        color: Colors.warning,
+        bg: Colors.warningLight,
+      };
     case 'RETURN_OVERDUE':
     case 'ASSET_DEFECTIVE_REPORTED':
-      return { icon: AlertTriangle, color: Colors.destructive, bg: '#fee2e2' }; // Red-100
+      return {
+        icon: AlertTriangle,
+        color: Colors.destructive,
+        bg: '#fee2e2',
+      };
+    // Red-100
     case 'UPCOMING_RETURN':
-      return { icon: Calendar, color: Colors.primary, bg: '#eff6ff' }; // Blue-50
+      return {
+        icon: Calendar,
+        color: Colors.primary,
+        bg: '#eff6ff',
+      };
+    // Blue-50
     case 'DISPOSAL_REQUEST':
-      return { icon: Trash2, color: Colors.mutedForeground, bg: Colors.muted };
+      return {
+        icon: Trash2,
+        color: Colors.mutedForeground,
+        bg: Colors.muted,
+      };
     case 'DISPOSAL_APPROVED':
-      return { icon: CheckCircle2, color: Colors.success, bg: '#dcfce7' }; // Green-100
+      return {
+        icon: CheckCircle2,
+        color: Colors.success,
+        bg: '#dcfce7',
+      };
+    // Green-100
     case 'DISPOSAL_REJECTED':
-      return { icon: XCircle, color: Colors.destructive, bg: '#fee2e2' }; // Red-100
+      return {
+        icon: XCircle,
+        color: Colors.destructive,
+        bg: '#fee2e2',
+      };
+    // Red-100
     case 'ROLE_CHANGE':
-      return { icon: User, color: Colors.primary, bg: '#eff6ff' };
+      return {
+        icon: User,
+        color: Colors.primary,
+        bg: '#eff6ff',
+      };
     case 'ASSIGNMENT_PENDING':
     case 'PENDING_ACCEPTANCE':
-      return { icon: Layers, color: Colors.warning, bg: Colors.warningLight };
+      return {
+        icon: Layers,
+        color: Colors.warning,
+        bg: Colors.warningLight,
+      };
     case 'ASSIGNMENT_ACCEPTED':
-      return { icon: Check, color: Colors.success, bg: '#dcfce7' };
+      return {
+        icon: Check,
+        color: Colors.success,
+        bg: '#dcfce7',
+      };
     default:
-      return { icon: Bell, color: Colors.primary, bg: Colors.warningLight };
+      return {
+        icon: Bell,
+        color: Colors.primary,
+        bg: Colors.warningLight,
+      };
   }
 };
-
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -110,13 +149,11 @@ export default function NotificationsScreen() {
     markAsRead,
     markAllAsRead,
   } = useNotifications();
-
   const [refreshing, setRefreshing] = useState(false);
   const [sortVisible, setSortVisible] = useState(false);
   const [activeSort, setActiveSort] = useState<
     'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'
   >('date-desc');
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -128,17 +165,14 @@ export default function NotificationsScreen() {
       setRefreshing(false);
     }
   }, [loadNotifications]);
-
   useEffect(() => {
     loadNotifications(30, 0);
   }, [loadNotifications]);
-
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await markAllAsRead();
   };
-
   const handleNotificationPress = async (
     id: string,
     isRead: boolean,
@@ -178,7 +212,6 @@ export default function NotificationsScreen() {
     }
     return 0;
   });
-
   const renderItem = ({
     item,
     index,
@@ -188,7 +221,6 @@ export default function NotificationsScreen() {
   }) => {
     const config = getEventTypeConfig(item.eventType);
     const IconComponent = config.icon;
-
     return (
       <Animated.View
         layout={Layout.springify()}
@@ -212,7 +244,12 @@ export default function NotificationsScreen() {
 
             {/* Event Type Icon */}
             <View
-              style={[styles.iconContainer, { backgroundColor: config.bg }]}
+              style={[
+                styles.iconContainer,
+                {
+                  backgroundColor: config.bg,
+                },
+              ]}
             >
               <IconComponent size={18} color={config.color} strokeWidth={2} />
             </View>
@@ -248,13 +285,19 @@ export default function NotificationsScreen() {
       </Animated.View>
     );
   };
-
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
+    <View
+      style={[
+        nativeStyles.panel,
+        {
+          paddingTop: insets.top,
+        },
+      ]}
+    >
       {/* Top Banner Header */}
       <View style={styles.header}>
         <View>
-          <Text className="text-2xl font-sansBold text-foreground">Alerts</Text>
+          <Text style={nativeStyles.title}>Alerts</Text>
           {unreadCount > 0 && (
             <Text style={styles.headerSubtitle}>
               {unreadCount} unread notifications
@@ -268,7 +311,9 @@ export default function NotificationsScreen() {
               onPress={handleMarkAllAsRead}
               style={({ pressed }) => [
                 styles.headerButton,
-                pressed && { opacity: 0.6 },
+                pressed && {
+                  opacity: 0.6,
+                },
               ]}
               accessibilityLabel="Mark all as read"
             >
@@ -285,7 +330,9 @@ export default function NotificationsScreen() {
               style={({ pressed }) => [
                 styles.headerButton,
                 sortVisible && styles.headerButtonActive,
-                pressed && { opacity: 0.6 },
+                pressed && {
+                  opacity: 0.6,
+                },
               ]}
               accessibilityLabel="Sort notifications"
             >
@@ -398,13 +445,18 @@ export default function NotificationsScreen() {
         />
       ) : null}
       {activeSort !== 'date-desc' && hasMore ? (
-        <Text style={{ paddingHorizontal: 20, color: Colors.mutedForeground }}>
+        <Text
+          style={{
+            paddingHorizontal: 20,
+            color: Colors.mutedForeground,
+          }}
+        >
           Sorting loaded alerts. Load older alerts to include them.
         </Text>
       ) : null}
       {/* Main Content List */}
       {isLoading && notifications.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
+        <View style={nativeStyles.container}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : notifications.length === 0 ? (
@@ -429,10 +481,8 @@ export default function NotificationsScreen() {
                     strokeWidth={1.5}
                   />
                 </View>
-                <Text className="text-lg font-sansBold text-foreground mt-4">
-                  All quiet for now
-                </Text>
-                <Text className="text-sm font-sans text-muted-foreground text-center mt-1 px-8">
+                <Text style={nativeStyles.title2}>All quiet for now</Text>
+                <Text style={nativeStyles.text}>
                   You&apos;re completely up to date! Updates on asset approvals
                   or system alerts will appear here.
                 </Text>
@@ -452,9 +502,16 @@ export default function NotificationsScreen() {
             ) : hasMore ? (
               <Pressable
                 onPress={() => void loadMore()}
-                style={{ padding: 16 }}
+                style={{
+                  padding: 16,
+                }}
               >
-                <Text style={{ textAlign: 'center', color: Colors.primary }}>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    color: Colors.primary,
+                  }}
+                >
                   Load older alerts
                 </Text>
               </Pressable>
@@ -477,7 +534,6 @@ export default function NotificationsScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -545,7 +601,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
     shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 1,
@@ -637,5 +696,35 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+});
+const nativeStyles = StyleSheet.create({
+  panel: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  title: {
+    fontSize: 24,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#0F172A',
+  },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title2: {
+    fontSize: 18,
+    fontFamily: 'NotoSans_700Bold',
+    color: '#0F172A',
+    marginTop: 16,
+  },
+  text: {
+    fontSize: 14,
+    fontFamily: 'NotoSans_400Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 32,
   },
 });

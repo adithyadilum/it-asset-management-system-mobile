@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, type ViewProps } from 'react-native';
+import { Colors } from '../../constants/colors';
 import { Platform } from 'react-native';
 
 type CardVariant = 'default' | 'elevated' | 'outlined';
@@ -7,20 +8,32 @@ type CardVariant = 'default' | 'elevated' | 'outlined';
 interface CardProps extends ViewProps {
   variant?: CardVariant;
   children: React.ReactNode;
-  className?: string;
 }
 
 /**
  * Shadcn-inspired card component.
- * Uses StyleSheet for shadow (cross-platform) + NativeWind className passthrough.
+ * Uses shared native colors and explicit variants.
  */
-export function Card({ variant = 'default', children, style, className = '', ...props }: CardProps) {
+export function Card({
+  variant = 'default',
+  children,
+  style,
+  ...props
+}: CardProps) {
   const variantStyle = variantStyles[variant];
 
   return (
     <View
-      className={`bg-card rounded-2xl border border-border ${className}`}
-      style={[variantStyle, style]}
+      style={[
+        {
+          backgroundColor: Colors.card,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: Colors.border,
+        },
+        variantStyle,
+        style,
+      ]}
       {...props}
     >
       {children}
@@ -56,6 +69,6 @@ const variantStyles = StyleSheet.create({
     }),
   },
   outlined: {
-    // No shadow, just border (handled by className)
+    // Uses the shared border without elevation.
   },
 });
