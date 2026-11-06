@@ -17,6 +17,7 @@ import {
 import { AssetImage } from './AssetImage';
 import { AssetStatus } from './AssetStatus';
 import { Button } from '../ui/Button';
+import { AssetOperationsActions } from '../operations/AssetOperationsActions';
 import { IssueReportForm } from '../dashboard/assets/IssueReportForm';
 
 type Tab = 'Overview' | 'Specifications' | 'History';
@@ -119,6 +120,11 @@ export function AssetProfileContent({
         ))}
       </View>
       <View style={styles.body}>
+        <AssetOperationsActions
+          profile={profile}
+          onChanged={onIssueReported}
+          onBusyChange={onBusyChange}
+        />
         {tab === 'Overview' && (
           <>
             <Section title="Asset information">

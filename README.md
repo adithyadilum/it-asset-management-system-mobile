@@ -127,3 +127,13 @@ Tap an asset or choose **View full asset profile** after a QR scan to view its i
 Backend routes required: `GET /api/v1/inventory` and `GET /api/v1/inventory/:assetId`. Both require registry access and accept the existing mobile bearer token. The backend API documentation describes query limits and response fields.
 
 Validation: `npm run check`, `node scripts/check-audit-baseline.mjs`, `npx expo-doctor`, and `npx expo export --platform android --platform ios`. The CI workflow also exports both native bundles.
+
+## Home, Tasks, handovers and returns
+
+Home now opens live team queues instead of static counters. Tasks support search, queue filters, prioritized due dates, pagination, refresh and retry. Disposal approval tasks are visible to Global Administrators only.
+
+Start a handover or receive equipment from Home, from an asset profile, or by scanning its code. Handover recipients can be active employees or locations. Employees still accept or decline in My Assets; operators cannot accept on their behalf. Location custody starts immediately. Pending handovers support an in-app reminder with a five-minute cooldown.
+
+Receiving equipment ends custody and moves it to Returned. The condition check then releases it to Available, opens an internal repair ticket, or creates a Pending Disposal request for administrator approval. Forms retain inputs after errors and guard against repeated submissions. The server checks the latest asset timestamp and assignment identity, with transaction locks for receiving and return requests.
+
+Required backend routes: `GET /api/v1/operations/tasks`, `GET /api/v1/operations/recipients`, `POST /api/v1/operations/handovers`, `POST /api/v1/operations/assignments/:id`, and `POST /api/v1/operations/inspections`. All require a paired mobile bearer token with IT operator or GlobalAdmin access.

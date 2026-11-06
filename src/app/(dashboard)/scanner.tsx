@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, {
   FadeIn,
   SlideInDown,
@@ -66,8 +66,11 @@ type ScanGeometry = {
 };
 
 export default function ScannerScreen() {
+  const { operation } = useLocalSearchParams<{ operation?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [mode, setMode] = useState<ScanMode>('qr');
+  const operationContext = operation === 'handover' || operation === 'return';
+  const scanMode: ScanMode = operationContext ? 'qr' : mode;
   const [hasScanned, setHasScanned] = useState(false);
   const permissionRequested = useRef(false);
   const scannerFocused = useRef(false);
@@ -140,11 +143,11 @@ export default function ScannerScreen() {
 
     const { data, type, bounds, cornerPoints, boundingBox } = scanResult;
 
-    if (mode === 'qr' && type !== 'qr') return;
-    if (mode === 'barcode' && type === 'qr') return;
+    if (scanMode === 'qr' && type !== 'qr') return;
+    if (scanMode === 'barcode' && type === 'qr') return;
 
-    const reticleWidth = mode === 'qr' ? 250 : 320;
-    const reticleHeight = mode === 'qr' ? 250 : 150;
+    const reticleWidth = scanMode === 'qr' ? 250 : 320;
+    const reticleHeight = scanMode === 'qr' ? 250 : 150;
     const reticleX = (layout.width - reticleWidth) / 2;
     const reticleY = (layout.height - reticleHeight) / 2;
 
@@ -197,7 +200,7 @@ export default function ScannerScreen() {
       () => {}
     );
 
-    if (mode === 'barcode') {
+    if (scanMode === 'barcode') {
       if (!data || data.trim().length === 0) {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Error
@@ -242,7 +245,15 @@ export default function ScannerScreen() {
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success
       ).catch(() => {});
-      setScannedAsset(asset);
+      if (operation === 'handover' || operation === 'return') {
+        router.replace({
+          pathname:
+            operation === 'handover'
+              ? '/operations/handover'
+              : '/operations/return',
+          params: { assetId: asset.asset.id },
+        });
+      } else setScannedAsset(asset);
     } catch (error) {
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Error
@@ -363,8 +374,8 @@ export default function ScannerScreen() {
         pointerEvents="none"
       >
         <ScannerReticle
-          width={mode === 'qr' ? 250 : 320}
-          height={mode === 'qr' ? 250 : 150}
+          width={scanMode === 'qr' ? 250 : 320}
+          height={scanMode === 'qr' ? 250 : 150}
         />
       </View>
 
@@ -376,57 +387,59 @@ export default function ScannerScreen() {
           className="items-center mt-6 px-6"
         >
           {/* Mode selector */}
-          <View style={styles.modeSelector}>
-            <Pressable
-              style={[
-                styles.modeButton,
-                mode === 'qr' && styles.modeButtonActive,
-              ]}
-              onPress={async () => {
-                await Haptics.impactAsync(
-                  Haptics.ImpactFeedbackStyle.Light
-                ).catch(() => {});
-                setMode('qr');
-                resumeScanning();
-              }}
-            >
-              <Text
+          {!operationContext && (
+            <View style={styles.modeSelector}>
+              <Pressable
                 style={[
-                  styles.modeText,
-                  mode === 'qr' && styles.modeTextActive,
+                  styles.modeButton,
+                  scanMode === 'qr' && styles.modeButtonActive,
                 ]}
+                onPress={async () => {
+                  await Haptics.impactAsync(
+                    Haptics.ImpactFeedbackStyle.Light
+                  ).catch(() => {});
+                  setMode('qr');
+                  resumeScanning();
+                }}
               >
-                QR Code
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.modeButton,
-                mode === 'barcode' && styles.modeButtonActive,
-              ]}
-              onPress={async () => {
-                await Haptics.impactAsync(
-                  Haptics.ImpactFeedbackStyle.Light
-                ).catch(() => {});
-                setMode('barcode');
-                resumeScanning();
-              }}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.modeText,
+                    scanMode === 'qr' && styles.modeTextActive,
+                  ]}
+                >
+                  QR Code
+                </Text>
+              </Pressable>
+              <Pressable
                 style={[
-                  styles.modeText,
-                  mode === 'barcode' && styles.modeTextActive,
+                  styles.modeButton,
+                  scanMode === 'barcode' && styles.modeButtonActive,
                 ]}
+                onPress={async () => {
+                  await Haptics.impactAsync(
+                    Haptics.ImpactFeedbackStyle.Light
+                  ).catch(() => {});
+                  setMode('barcode');
+                  resumeScanning();
+                }}
               >
-                Barcode
-              </Text>
-            </Pressable>
-          </View>
+                <Text
+                  style={[
+                    styles.modeText,
+                    scanMode === 'barcode' && styles.modeTextActive,
+                  ]}
+                >
+                  Barcode
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
           <Text style={styles.instruction}>
             {cooldownSeconds > 0
               ? `Scanning paused — resuming in ${cooldownSeconds}s`
-              : mode === 'qr'
+              : scanMode === 'qr'
                 ? 'Point camera at a QR code'
                 : 'Point camera at an asset barcode'}
           </Text>

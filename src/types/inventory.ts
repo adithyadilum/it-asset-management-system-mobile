@@ -15,6 +15,7 @@ export interface InventoryAsset {
 }
 export interface InventoryFilters {
   query?: string;
+  operation?: 'handover' | 'return';
   pillar?: string;
   categoryId?: number;
   locationId?: number;
@@ -37,6 +38,7 @@ export interface AssetProfile {
     serialNumber: string | null;
     status: string;
     condition: string | null;
+    isArchived?: boolean;
     createdAt: string;
     updatedAt: string;
   };
@@ -52,6 +54,7 @@ export interface AssetProfile {
   owner: { id: number; companyName: string } | null;
   warrantyExpiry: string | null;
   assignment: {
+    id: number;
     assignedToUser: { id: string; name: string; email: string } | null;
     assignedToLocation: { id: number; name: string } | null;
     assignedDate: string;

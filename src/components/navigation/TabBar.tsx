@@ -2,7 +2,13 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Home, Package, Bell, Search } from 'lucide-react-native';
+import {
+  Home,
+  Package,
+  Bell,
+  Search,
+  ClipboardList,
+} from 'lucide-react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Colors } from '../../constants/colors';
 import { useNotifications } from '../../context/notifications-context';
@@ -20,6 +26,10 @@ function TabIcon({ routeName, isFocused }: TabIconProps) {
   switch (routeName) {
     case 'index':
       return <Home size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'tasks':
+      return (
+        <ClipboardList size={size} color={color} strokeWidth={strokeWidth} />
+      );
     case 'inventory':
       return <Search size={size} color={color} strokeWidth={strokeWidth} />;
     case 'my-assets':
@@ -34,6 +44,7 @@ function TabIcon({ routeName, isFocused }: TabIconProps) {
 const TAB_LABELS: Record<string, string> = {
   index: 'Home',
   inventory: 'Inventory',
+  tasks: 'Tasks',
   'my-assets': 'My Assets',
   notifications: 'Alerts',
 };

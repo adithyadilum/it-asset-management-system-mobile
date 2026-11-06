@@ -1,6 +1,9 @@
 import React from 'react';
 import { AssetProfileContent } from './AssetProfileContent';
 import type { AssetProfile } from '../../types/inventory';
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+}));
 const { create, act } = jest.requireActual('react-test-renderer');
 jest.mock(
   'lucide-react-native',
@@ -67,6 +70,8 @@ it('shows allocated and unused software seats and supports specs and history tab
     );
   });
   expect(JSON.stringify(tree.toJSON())).toContain('Unused');
+  expect(JSON.stringify(tree.toJSON())).toContain('\u00b7');
+  expect(JSON.stringify(tree.toJSON())).not.toContain(' ? ');
   expect(JSON.stringify(tree.toJSON())).toContain('16');
   expect(JSON.stringify(tree.toJSON())).not.toContain('Report an issue');
   await act(async () =>
