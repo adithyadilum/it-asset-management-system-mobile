@@ -27,7 +27,7 @@ import { Colors } from '../../constants/colors';
 import { ScannerReticle } from '../../components/ui/ScannerReticle';
 import { fetchScannedAssetDetails, injectBarcode } from '../../services/scan';
 import { reportAssetIssue } from '../../services/issues';
-import { toMessage } from '../../lib/errors';
+import { isSessionEnded, toMessage } from '../../lib/errors';
 import { RateLimitError } from '../../constants/api';
 import { AssetDetailsData } from '../../types/asset';
 type ScanMode = 'qr' | 'barcode';
@@ -231,6 +231,7 @@ export default function ScannerScreen() {
           },
         ]);
       } catch (error) {
+        if (isSessionEnded(error)) return;
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Error
         ).catch(() => {});
@@ -269,6 +270,7 @@ export default function ScannerScreen() {
         });
       } else setScannedAsset(asset);
     } catch (error) {
+      if (isSessionEnded(error)) return;
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Error
       ).catch(() => {});
@@ -340,6 +342,7 @@ export default function ScannerScreen() {
       setShowReportForm(false);
       setIssueNote('');
     } catch (error) {
+      if (isSessionEnded(error)) return;
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Error
       ).catch(() => {});

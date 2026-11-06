@@ -9,6 +9,9 @@ import {
   fetchApi,
   getApiUrl,
   setUnauthenticatedHandler,
+  setStoredToken,
+  invalidateSession,
+  getStoredToken,
 } from './api';
 
 jest.mock('expo-secure-store', () => ({
@@ -33,10 +36,11 @@ function jsonResponse(
 
 const ORIGINAL_API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   process.env.EXPO_PUBLIC_API_URL = 'https://api.example.com';
   mockSecureStore.getItemAsync.mockResolvedValue('a-token');
+  await setStoredToken('a-token');
   setUnauthenticatedHandler(null);
 });
 
@@ -311,4 +315,72 @@ it('uses the caller deadline and distinguishes server timeout from network loss'
   await jest.advanceTimersByTimeAsync(4001);
   await assertion;
   jest.useRealTimers();
+});
+
+it('invalidates once and notifies before a slow secure-storage deletion finishes', async () => {
+  let finish: () => void = () => {};
+  mockSecureStore.deleteItemAsync.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      })
+  );
+  const handler = jest.fn();
+  setUnauthenticatedHandler(handler);
+  const first = invalidateSession('a-token', 'unlinked');
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  expect(handler).toHaveBeenCalledWith('unlinked');
+  const duplicate = invalidateSession('a-token', 'unlinked');
+  finish();
+  await Promise.all([first, duplicate]);
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(await getStoredToken()).toBeNull();
+});
+it('still logs out when keychain deletion fails and blocks the revoked credential', async () => {
+  const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  mockSecureStore.deleteItemAsync.mockRejectedValueOnce(
+    new Error('Keychain unavailable')
+  );
+  const handler = jest.fn();
+  setUnauthenticatedHandler(handler);
+  await expect(
+    invalidateSession('a-token', 'unlinked')
+  ).resolves.toBeUndefined();
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(await getStoredToken()).toBeNull();
+  expect(warning).toHaveBeenCalledWith(
+    'Revoked credentials could not be removed from secure storage.'
+  );
+  warning.mockRestore();
+});
+it('pins background authorization to its original pairing', async () => {
+  global.fetch = jest.fn();
+  await expect(
+    fetchApi('/api/v1/pusher/auth', { expectedToken: 'old-pairing' })
+  ).rejects.toBeInstanceOf(SessionExpiredError);
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(mockSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+});
+it('serializes form authorization and discards successful responses received after unlinking', async () => {
+  let finish: (response: Response) => void = () => {};
+  global.fetch = jest.fn().mockImplementationOnce(
+    () =>
+      new Promise<Response>((resolve) => {
+        finish = resolve;
+      })
+  );
+  const pending = fetchApi('/api/v1/pusher/auth', {
+    method: 'POST',
+    formBody: { socket_id: '123.456', channel_name: 'private-device-a+b' },
+  });
+  const assertion = expect(pending).rejects.toBeInstanceOf(SessionExpiredError);
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+  expect(init.headers['Content-Type']).toBe(
+    'application/x-www-form-urlencoded'
+  );
+  expect(init.body).toBe('socket_id=123.456&channel_name=private-device-a%2Bb');
+  await invalidateSession('a-token', 'unlinked');
+  finish(jsonResponse({ auth: 'old-session-response' }));
+  await assertion;
 });

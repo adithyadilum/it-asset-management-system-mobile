@@ -11,3 +11,8 @@ export function toMessage(error: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+/** Expected session transitions are handled centrally, without screen errors or alerts. */
+export function isSessionEnded(error: unknown): boolean {
+  return error instanceof Error && error.name === 'SessionExpiredError';
+}

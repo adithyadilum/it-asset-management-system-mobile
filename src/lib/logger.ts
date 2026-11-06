@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import { isSessionEnded } from './errors';
 
 /**
  * The app's single logging surface.
@@ -19,10 +20,12 @@ export const logger = {
   },
 
   warn(message: string, ...details: unknown[]): void {
+    if (details.some(isSessionEnded)) return;
     console.warn(message, ...details);
   },
 
   error(message: string, error?: unknown): void {
+    if (isSessionEnded(error)) return;
     console.error(message, error);
   },
 };

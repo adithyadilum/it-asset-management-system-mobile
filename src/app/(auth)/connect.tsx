@@ -42,7 +42,7 @@ export default function ConnectScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const scanInFlight = useRef(false);
 
-  const { setIsAuthenticated } = useAuth();
+  const { setIsAuthenticated, sessionNotice } = useAuth();
 
   const handleScan = async ({ data }: { data: string }) => {
     if (scanInFlight.current || isLoading || !isScanning) return;
@@ -255,6 +255,30 @@ export default function ConnectScreen() {
           </View>
         </Animated.View>
 
+        {sessionNotice ? (
+          <View
+            accessibilityLiveRegion="polite"
+            style={{
+              backgroundColor: Colors.muted,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: Colors.border,
+              padding: 16,
+              marginBottom: 20,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: 'NotoSans_500Medium',
+                fontSize: 13,
+                lineHeight: 20,
+                color: Colors.primary,
+              }}
+            >
+              {sessionNotice}
+            </Text>
+          </View>
+        ) : null}
         {/* Middle content */}
         <Animated.View
           entering={FadeInDown.delay(100).duration(600)}

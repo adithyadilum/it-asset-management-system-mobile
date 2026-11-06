@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { logger } from '../lib/logger';
 
 /**
  * The single HTTP client for the app.
@@ -64,7 +65,7 @@ export class ApiError extends Error {
  */
 export class SessionExpiredError extends ApiError {
   constructor(
-    message = 'Your session has expired. Please re-pair this device.'
+    message = 'Your device session has ended. Pair this device again to continue.'
   ) {
     super(message, 401);
     this.name = 'SessionExpiredError';
@@ -95,7 +96,8 @@ export class NetworkError extends Error {
   }
 }
 
-type UnauthenticatedHandler = () => void;
+export type SessionEndReason = 'unlinked' | 'ended';
+type UnauthenticatedHandler = (reason: SessionEndReason) => void;
 
 let onUnauthenticated: UnauthenticatedHandler | null = null;
 
@@ -164,16 +166,55 @@ export function getApiUrl(): string {
   return url.replace(/\/+$/, '');
 }
 
+// Serialize keychain mutations so a late revocation cannot delete a new pairing.
+let tokenUpdates: Promise<unknown> = Promise.resolve();
+let invalidToken: string | null = null;
+let lastKnownToken: string | null = null;
+function updateToken<T>(update: () => Promise<T>): Promise<T> {
+  const next = tokenUpdates.then(update);
+  tokenUpdates = next.catch(() => undefined);
+  return next;
+}
 export async function getStoredToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  await tokenUpdates;
+  const token = await SecureStore.getItemAsync(TOKEN_KEY);
+  lastKnownToken = token;
+  return token === invalidToken ? null : token;
 }
-
-export async function clearStoredToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+export function clearStoredToken(): Promise<void> {
+  return updateToken(async () => {
+    invalidToken = await SecureStore.getItemAsync(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  });
 }
-
-export async function setStoredToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+export function setStoredToken(token: string): Promise<void> {
+  return updateToken(async () => {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    invalidToken = null;
+    lastKnownToken = token;
+  });
+}
+/** End only the session that received the event or rejection, once. */
+export function invalidateSession(
+  token: string,
+  reason: SessionEndReason = 'ended'
+): Promise<void> {
+  return updateToken(async () => {
+    const current = await SecureStore.getItemAsync(TOKEN_KEY).catch(
+      () => lastKnownToken
+    );
+    if (invalidToken === token || current !== token) return;
+    invalidToken = token;
+    // Remove protected screens immediately, even if secure storage is slow or fails.
+    onUnauthenticated?.(reason);
+    try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    } catch {
+      logger.warn(
+        'Revoked credentials could not be removed from secure storage.'
+      );
+    }
+  });
 }
 
 export class RequestTimeoutError extends Error {
@@ -185,6 +226,10 @@ export class RequestTimeoutError extends Error {
 
 interface FetchOptions extends Omit<RequestInit, 'body'> {
   requiresAuth?: boolean;
+  /** Pin background checks and socket authorization to their original pairing. */
+  expectedToken?: string;
+  /** Private-channel authorization uses the same HTTP/session handling. */
+  formBody?: Record<string, string>;
   timeoutMs?: number;
   /** Serialized to JSON automatically. */
   body?: unknown;
@@ -211,6 +256,8 @@ export async function fetchApi<T>(
 ): Promise<T> {
   const {
     requiresAuth = true,
+    expectedToken,
+    formBody,
     timeoutMs = REQUEST_TIMEOUT_MS,
     headers: customHeaders,
     body,
@@ -218,7 +265,9 @@ export async function fetchApi<T>(
   } = options;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    'Content-Type': formBody
+      ? 'application/x-www-form-urlencoded'
+      : 'application/json',
     ...(customHeaders as Record<string, string> | undefined),
   };
 
@@ -226,8 +275,10 @@ export async function fetchApi<T>(
   if (requiresAuth) {
     const token = await getStoredToken();
     requestToken = token;
+    if (expectedToken && token !== expectedToken)
+      throw new SessionExpiredError();
     if (!token) {
-      onUnauthenticated?.();
+      onUnauthenticated?.('ended');
       throw new SessionExpiredError(
         'Not authenticated. Please re-pair your device.'
       );
@@ -245,10 +296,21 @@ export async function fetchApi<T>(
     response = await fetch(url, {
       ...restOptions,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: formBody
+        ? Object.entries(formBody)
+            .map(
+              ([name, value]) =>
+                `${encodeURIComponent(name)}=${encodeURIComponent(value)}`
+            )
+            .join('&')
+        : body === undefined
+          ? undefined
+          : JSON.stringify(body),
       signal: timeout.signal,
     });
   } catch (cause) {
+    if (requiresAuth && (await getStoredToken()) !== requestToken)
+      throw new SessionExpiredError();
     if (timeout.timedOut) {
       throw new RequestTimeoutError();
     }
@@ -271,21 +333,16 @@ export async function fetchApi<T>(
   }
 
   if (response.status === 401) {
-    // The token is no longer accepted — revoked, expired, or the account was
-    // deactivated. Drop it and send the user back to pairing rather than
-    // leaving them on a dashboard where every request fails.
-    // A delayed response from a previous pairing must not clear a newer session.
-    if (requiresAuth && (await getStoredToken()) === requestToken) {
-      await clearStoredToken();
-      onUnauthenticated?.();
-    }
+    if (requiresAuth && requestToken) await invalidateSession(requestToken);
     throw new SessionExpiredError(
-      await readErrorMessage(
-        response,
-        'Your session has expired. Please re-pair this device.'
-      )
+      requiresAuth
+        ? undefined
+        : await readErrorMessage(response, 'Your device session has ended.')
     );
   }
+  // A response from an old pairing must not repopulate UI or report success after logout.
+  if (requiresAuth && (await getStoredToken()) !== requestToken)
+    throw new SessionExpiredError();
 
   if (response.status === 429) {
     // `X-RateLimit-Reset` is an absolute epoch-second value; clamp to a sane
@@ -313,5 +370,8 @@ export async function fetchApi<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const result = (await response.json()) as T;
+  if (requiresAuth && (await getStoredToken()) !== requestToken)
+    throw new SessionExpiredError();
+  return result;
 }
