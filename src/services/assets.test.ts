@@ -50,6 +50,25 @@ describe('acknowledgeAssignment', () => {
 });
 
 describe('fetchMyAssets', () => {
+  it('keeps software seats separate from equipment acceptance', async () => {
+    const software = [
+      {
+        allocationId: 17,
+        name: 'Microsoft 365 Business',
+        licenseType: 'Subscription',
+        expiryDate: '2027-04-30',
+      },
+    ];
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(jsonResponse({ data: [], software }));
+    expect(await fetchMyAssets()).toEqual({
+      activeAssets: [],
+      pendingAssignments: [],
+      softwareAssets: software,
+    });
+  });
+
   it('splits pending acknowledgments from active assets', async () => {
     global.fetch = jest.fn().mockResolvedValue(
       jsonResponse({

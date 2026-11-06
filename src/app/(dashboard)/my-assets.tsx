@@ -17,8 +17,10 @@ import {
   fetchMyAssets,
   acknowledgeAssignment,
   type AssetEntry,
+  type SoftwareAssetEntry,
   type PendingAssignment,
 } from '../../services/assets';
+import { SoftwareAssetRow } from '../../components/dashboard/assets/SoftwareAssetRow';
 import { AssetRow } from '../../components/dashboard/assets/AssetRow';
 import { PendingAssignmentBanner } from '../../components/dashboard/assets/PendingAssignmentBanner';
 import { AcknowledgmentSheet } from '../../components/dashboard/assets/AcknowledgmentSheet';
@@ -37,7 +39,7 @@ const AnimatedAssetRow = React.memo(function AnimatedAssetRow({
 }) {
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 60)
+      entering={FadeInDown.delay(Math.min(index, 5) * 40)
         .duration(400)
         .springify()}
     >
@@ -60,6 +62,9 @@ export default function MyAssetsScreen() {
   const insets = useSafeAreaInsets();
 
   // Asset lists
+  const [softwareAssets, setSoftwareAssets] = useState<SoftwareAssetEntry[]>(
+    []
+  );
   const [activeAssets, setActiveAssets] = useState<AssetEntry[]>([]);
   const [pendingAssignments, setPendingAssignments] = useState<
     PendingAssignment[]
@@ -83,8 +88,13 @@ export default function MyAssetsScreen() {
 
   const loadData = useCallback(async () => {
     setError(null);
-    const { activeAssets: a, pendingAssignments: p } = await fetchMyAssets();
+    const {
+      activeAssets: a,
+      pendingAssignments: p,
+      softwareAssets: software,
+    } = await fetchMyAssets();
     setActiveAssets(a);
+    setSoftwareAssets(software);
     setPendingAssignments(p);
   }, []);
 
@@ -165,8 +175,11 @@ export default function MyAssetsScreen() {
   // ── Derived values ────────────────────────────────────────────────────────
 
   const hasNoAssets =
-    activeAssets.length === 0 && pendingAssignments.length === 0;
-  const totalCount = activeAssets.length + pendingAssignments.length;
+    activeAssets.length === 0 &&
+    pendingAssignments.length === 0 &&
+    softwareAssets.length === 0;
+  const totalCount =
+    activeAssets.length + pendingAssignments.length + softwareAssets.length;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -174,18 +187,9 @@ export default function MyAssetsScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* ── Section Header ── */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Package
-            size={16}
-            color={Colors.foreground}
-            strokeWidth={2}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={styles.headerTitle}>My Assets</Text>
-        </View>
+        <Text style={styles.headerTitle}>My Assets</Text>
+        <Text style={styles.headerSub}>Your equipment and software access</Text>
       </View>
-
-      <Text style={styles.headerSub}>Assets currently assigned to you</Text>
 
       {/* ── Loading State ── */}
       {loading && (
@@ -269,6 +273,11 @@ export default function MyAssetsScreen() {
                 />
               )}
 
+              {activeAssets.length > 0 && (
+                <Text style={styles.sectionTitle}>
+                  Equipment ({activeAssets.length})
+                </Text>
+              )}
               {/* Active asset cards */}
               {activeAssets.map((asset, index) => (
                 <AnimatedAssetRow
@@ -279,6 +288,16 @@ export default function MyAssetsScreen() {
                 />
               ))}
 
+              {softwareAssets.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>
+                    Software access ({softwareAssets.length})
+                  </Text>
+                  {softwareAssets.map((asset) => (
+                    <SoftwareAssetRow key={asset.allocationId} asset={asset} />
+                  ))}
+                </>
+              )}
               <Text style={styles.footerText}>
                 {totalCount} asset{totalCount !== 1 ? 's' : ''} assigned to you
               </Text>
@@ -315,37 +334,46 @@ export default function MyAssetsScreen() {
 }
 
 const styles = StyleSheet.create({
+  sectionTitle: {
+    fontFamily: 'NotoSans_700Bold',
+    fontSize: 15,
+    color: Colors.foreground,
+    marginBottom: 12,
+    marginTop: 8,
+  },
   screen: {
     flex: 1,
-    backgroundColor: Colors.background,
-    paddingHorizontal: 20,
+    backgroundColor: Colors.backgroundSubtle,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 2,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    gap: 6,
+    backgroundColor: Colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 28,
     fontFamily: 'NotoSans_700Bold',
     color: Colors.foreground,
   },
   headerSub: {
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 19,
     fontFamily: 'NotoSans_400Regular',
     color: Colors.mutedForeground,
-    marginBottom: 16,
   },
   list: {
     flex: 1,
   },
   listContent: {
+    padding: 20,
     paddingBottom: 32,
   },
   centeredState: {

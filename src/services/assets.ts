@@ -22,9 +22,23 @@ export interface AssetEntry {
   condition?: string;
 }
 
+export interface SoftwareAssetEntry {
+  allocationId: number;
+  assetId: string | null;
+  tagId: string | null;
+  name: string;
+  brand: string;
+  category: string;
+  imageUrl: string | null;
+  allocatedDate: string;
+  licenseType: string;
+  expiryDate: string | null;
+}
+
 /** The full response envelope from /api/v1/assets/my-assets */
 export interface AssetListResponse {
   data: AssetEntry[];
+  software?: SoftwareAssetEntry[];
 }
 
 /** An assignment that is waiting for the user's acknowledgment */
@@ -41,6 +55,7 @@ export interface PendingAssignment extends AssetEntry {
  */
 export async function fetchMyAssets(): Promise<{
   activeAssets: AssetEntry[];
+  softwareAssets: SoftwareAssetEntry[];
   pendingAssignments: PendingAssignment[];
 }> {
   const result = await fetchApi<AssetListResponse>('/api/v1/assets/my-assets');
@@ -52,7 +67,11 @@ export async function fetchMyAssets(): Promise<{
     (a) => a.state !== 'pending approval'
   );
 
-  return { activeAssets, pendingAssignments };
+  return {
+    activeAssets,
+    pendingAssignments,
+    softwareAssets: result.software ?? [],
+  };
 }
 
 /**

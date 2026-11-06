@@ -11,8 +11,9 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 - **Tethered Data Entry (Barcode Injection)**: Scan manufacturer 1D barcodes (Code 128, Code 39, UPC, EAN) using the camera to instantly inject values into the active input field on your EITAMS desktop screen via Pusher WebSockets.
 - **Standalone Lookup**: Scan QR codes on-the-go to load live asset metadata (Asset Tag, Status, Model, Location, and current Custodian) in a native bottom-sheet overlay.
 - **Identity Handshake**: Link the mobile client securely to EITAMS desktop sessions using encrypted JWT keys with `expo-secure-store` and `expo-camera` for scan handshake.
-- **My Assets**: Review assigned equipment, accept pending handovers, and report a fault from the asset sheet. Reporting starts the existing repair workflow and closes custody; it is restricted to asset-management roles.
+- **My Assets**: Review assigned equipment and software seats, accept pending handovers, and report equipment faults. Software details include allocation dates, licence type and expiry; licence keys stay private. Reporting starts the existing repair workflow and closes custody; it is restricted to asset-management roles.
 - **Actionable Alerts**: Load older alerts, mark them read, and open My Assets natively. Other supported alert links open the trusted web deployment using its normal browser sign-in.
+- **Scanner-first Home**: Launch the scanner from the large hero card, use custody shortcuts, and open live task queues from the summary cards.
 - **Honest Dashboard States**: Metrics show loading and retry states when the API is unavailable. Unknown asset statuses keep their actual labels.
 
 ---
@@ -21,7 +22,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 
 - **Framework**: [React Native](https://reactnative.dev/) / [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)
 - **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based native routing)
-- **Styling**: [NativeWind v4](https://www.nativewind.dev/) (Tailwind CSS engine for React Native)
+- **Styling**: React Native `StyleSheet` with shared color tokens
 - **Language**: TypeScript
 - **Real-time & Sync**: Pusher WebSockets
 - **Hardware Integration**: `expo-camera` (viewfinder scanning) and `expo-haptics` (vibration feedback)
@@ -44,9 +45,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 │   ├── lib/                # JWT decoding, logger, error narrowing
 │   ├── services/           # Typed API calls, one per backend area
 │   └── types/              # Shared TypeScript interfaces
-├── docs/                   # Audit report and engineering notes
-├── global.css              # NativeWind theme variables
-└── tailwind.config.js      # Tailwind configuration
+└── docs/                   # Audit report and engineering notes
 ```
 
 ---
