@@ -41,12 +41,11 @@ jobs:
       - name: Test
         run: npm test
 
-      # `npm audit --audit-level=high` cannot pass here: every current advisory
-      # arrives through the Expo SDK toolchain, and the only remediation npm
-      # offers installs a new major SDK. This fails on anything *new* instead,
-      # so a pull request that adds a vulnerable dependency is still caught.
-      - name: Audit dependencies against the recorded baseline
-        run: node scripts/check-audit-baseline.mjs
+      - name: Test patched dependency behavior and Expo fingerprinting
+        run: npm run test:dependencies
+
+      - name: Reject dependency vulnerabilities at every severity
+        run: npm run audit:dependencies
 
       - name: Export Android and iOS bundles
         run: npx expo export --platform android --platform ios

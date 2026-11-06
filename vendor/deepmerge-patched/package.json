@@ -1,0 +1,7 @@
+{
+  "name": "@tiqri/deepmerge-patched",
+  "version": "4.3.1-tiqri.1",
+  "private": true,
+  "license": "MIT",
+  "main": "index.cjs"
+}

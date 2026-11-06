@@ -1,0 +1,10 @@
+{
+  "name": "@tiqri/decode-uri-component-compat",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "main": "index.cjs",
+  "peerDependencies": {
+    "decode-uri-component-modern": "0.5.1"
+  }
+}

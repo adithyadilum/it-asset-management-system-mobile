@@ -97,7 +97,7 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
 npm test            # jest
-npm run check       # all three, as CI runs them
+npm run check       # types, lint, unit and dependency security tests
 ```
 
 CI runs the same gates on every push and pull request to `main` and `dev`.
@@ -148,7 +148,7 @@ Tap an asset or choose **View full asset profile** after a QR scan to view its i
 
 Backend routes required: `GET /api/v1/inventory` and `GET /api/v1/inventory/:assetId`. Both require registry access and accept the existing mobile bearer token. The backend API documentation describes query limits and response fields.
 
-Validation: `npm run check`, `node scripts/check-audit-baseline.mjs`, `npx expo-doctor`, and `npx expo export --platform android --platform ios`. The CI workflow also exports both native bundles.
+Validation: `npm run check`, `npm run audit:dependencies`, `npx expo-doctor`, and `npx expo export --platform android --platform ios`. The CI workflow also exports both native bundles.
 
 ## Home, Tasks, handovers and returns
 
@@ -159,3 +159,15 @@ Start a handover or receive equipment from Home, from an asset profile, or by sc
 Receiving equipment ends custody and moves it to Returned. The condition check then releases it to Available, opens an internal repair ticket, or creates a Pending Disposal request for administrator approval. Forms retain inputs after errors and guard against repeated submissions. The server checks the latest asset timestamp and assignment identity, with transaction locks for receiving and return requests.
 
 Required backend routes: `GET /api/v1/operations/tasks`, `GET /api/v1/operations/recipients`, `POST /api/v1/operations/handovers`, `POST /api/v1/operations/assignments/:id`, and `POST /api/v1/operations/inspections`. All require a paired mobile bearer token with IT operator or GlobalAdmin access.
+
+## Dependency security
+
+`npm ci` installs an audited SDK 57 dependency tree. CI runs `npm run audit:dependencies` and rejects every severity, plus `npm run test:dependencies` to verify the patched dependencies against their consumers. There is no vulnerability allowance baseline.
+
+Scoped overrides update the fingerprinting and TypeScript linting dependencies to patched `glob` and `minimatch` versions while preserving the older, unaffected `minimatch` APIs used by Jest and ESLint.
+
+`decode-uri-component-modern` aliases upstream 0.5.1, which fixes [GHSA-qr28-fpjm-wq7f](https://github.com/advisories/GHSA-qr28-fpjm-wq7f) and [GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr). `vendor/decode-uri-component-compat` exposes that ESM decoder as the CommonJS function expected by Expo Router's `query-string` dependency. Keep the alias and adapter together; removing either breaks SDK 57 route parsing.
+
+Upstream `deepmerge` has no published fix for [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4). `vendor/deepmerge-patched` contains the upstream 4.3.1 CommonJS distribution with its MIT licence and a targeted backport: destination keys use `Object.defineProperty` instead of assignment, so copying an own `__proto__` key cannot invoke the prototype setter. It preserves Jest's existing merge API. See the vendor README for provenance and removal criteria. This is patched code, not an advisory suppression.
+
+After future Expo/Jest upgrades, check whether these adapters can be removed in favor of upstream patched dependencies. Run the dependency security tests, audit, Expo Doctor and both native exports before removing an override.

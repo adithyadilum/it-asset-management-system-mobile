@@ -19,7 +19,7 @@ module.exports = defineConfig([
   },
   {
     // Command-line scripts report to stdout; that is their entire output. The
-    // audit-baseline gate printing its comparison table is not stray logging.
+    // dependency test runner printing its results is not stray logging.
     files: ['scripts/**/*'],
     rules: { 'no-console': 'off' },
   },

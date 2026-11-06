@@ -6,6 +6,8 @@
     "@expo-google-fonts/noto-sans": "^0.4.2",
     "@expo/metro-runtime": "~57.0.18",
     "@react-native-community/netinfo": "12.0.1",
+    "decode-uri-component": "file:vendor/decode-uri-component-compat",
+    "decode-uri-component-modern": "npm:decode-uri-component@0.5.1",
     "expo": "~57.0.32",
     "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.23",
@@ -34,6 +36,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "~19.2.4",
     "babel-preset-expo": "~57.0.0",
+    "deepmerge": "file:vendor/deepmerge-patched",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~57.0.2",
     "jest": "^29.7.0",
@@ -48,11 +51,24 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "jest",
-    "check": "npm run typecheck && npm run lint && npm test",
-    "preflight": "node scripts/preflight.mjs"
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:dependencies",
+    "preflight": "node scripts/preflight.mjs",
+    "test:dependencies": "node --test scripts/dependency-security.test.cjs",
+    "audit:dependencies": "npm audit --audit-level=low"
   },
   "private": true,
   "engines": {
     "node": ">=22.13.0"
+  },
+  "overrides": {
+    "@expo/fingerprint": {
+      "glob": "^14.0.3",
+      "minimatch": "^11.0.4"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.4"
+    },
+    "deepmerge": "$deepmerge",
+    "decode-uri-component": "$decode-uri-component"
   }
 }
