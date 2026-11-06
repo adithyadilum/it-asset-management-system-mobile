@@ -102,16 +102,39 @@ npm run check       # all three, as CI runs them
 
 CI runs the same gates on every push and pull request to `main` and `dev`.
 
-### 4. Native Builds
+### 4. Generate an installable APK for the Vercel deployment
 
-The app runs in Expo Go for day-to-day development. Camera permission changes (including removal of Android microphone access) require a fresh native build. Standalone builds go through EAS:
+The existing `preview` profile in `eas.json` builds a signed, standalone Android APK and uses `https://tiqri-assets.vercel.app`. It already includes the public Pusher key and cluster. The project is linked to Expo; use an account with access to that project.
 
-```bash
-npx eas build --profile development --platform android
-npx eas build --profile production --platform all
-# Local bundle check without publishing:
-npx expo export --platform android --output-dir dist
+From this repository in PowerShell:
+
+```powershell
+npm ci
+npm run check
+npx expo-doctor
+npx eas-cli@latest login
+npx eas-cli@latest build --platform android --profile preview
 ```
+
+If signing credentials are requested, reuse the existing Android keystore; for the first build, let EAS generate one. Download the APK from the build link, open it on the Android phone, and allow installation from that source when Android prompts. This build runs without Expo Go, Metro, or a computer on the same Wi-Fi.
+
+Open the installed app, then generate a fresh code from **Link Device** at `https://tiqri-assets.vercel.app` and scan it in the app. Unlink it from the web to verify that the pairing screen appears with a device-unlinked notice.
+
+The Vercel deployment must use the same Pusher app/key/cluster as the APK. Keep `PUSHER_SECRET`, `PUSHER_APP_ID`, and `MOBILE_JWT_SECRET` on the server; the APK only contains public configuration and the device credential issued during pairing. Changes to `EXPO_PUBLIC_*` build configuration require a new APK.
+
+`preview` is the installable APK profile. `production` produces the Android App Bundle for Google Play. Native bundle validation without a cloud build:
+
+```powershell
+npx expo export --platform android --platform ios --output-dir dist
+```
+
+References: [Expo APK builds](https://docs.expo.dev/build-reference/apk/) and [EAS build setup](https://docs.expo.dev/build/setup/).
+
+### 5. Device unlinking and session recovery
+
+A private `device_unlinked` event immediately removes protected screens and returns the app to pairing. HTTP 401 responses and rejected socket authorization use the same session handler. Late responses from an earlier pairing cannot clear or repopulate a newer session. Ordinary network errors, timeouts and server outages preserve the pairing.
+
+The app checks its session on foreground resume, network reconnection and socket subscription, and every 15 seconds while active and connected. This catches missed events; a suspended or offline phone detects revocation after it resumes or reconnects. Session transitions show a quiet notice instead of scanner alerts or development error overlays.
 
 ---
 
