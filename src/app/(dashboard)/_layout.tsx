@@ -4,7 +4,7 @@ import { TabBar } from '../../components/navigation/TabBar';
 
 /**
  * Dashboard group layout with bottom tab navigator.
- * Three visible tabs: Home, My Assets, Notifications.
+ * Four visible tabs: Home, Inventory, My Assets, Notifications.
  * Scanner is a hidden route accessible via push navigation.
  */
 export default function DashboardLayout() {
@@ -21,6 +21,7 @@ export default function DashboardLayout() {
           title: 'Home',
         }}
       />
+      <Tabs.Screen name="inventory" options={{ title: 'Inventory' }} />
       <Tabs.Screen
         name="my-assets"
         options={{

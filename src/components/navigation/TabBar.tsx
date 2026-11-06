@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Home, Package, Bell } from 'lucide-react-native';
+import { Home, Package, Bell, Search } from 'lucide-react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Colors } from '../../constants/colors';
 import { useNotifications } from '../../context/notifications-context';
@@ -20,6 +20,8 @@ function TabIcon({ routeName, isFocused }: TabIconProps) {
   switch (routeName) {
     case 'index':
       return <Home size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'inventory':
+      return <Search size={size} color={color} strokeWidth={strokeWidth} />;
     case 'my-assets':
       return <Package size={size} color={color} strokeWidth={strokeWidth} />;
     case 'notifications':
@@ -31,6 +33,7 @@ function TabIcon({ routeName, isFocused }: TabIconProps) {
 
 const TAB_LABELS: Record<string, string> = {
   index: 'Home',
+  inventory: 'Inventory',
   'my-assets': 'My Assets',
   notifications: 'Alerts',
 };
@@ -69,7 +72,9 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              await Haptics.impactAsync(
+                Haptics.ImpactFeedbackStyle.Light
+              ).catch(() => undefined);
               navigation.navigate(route.name);
             }
           };

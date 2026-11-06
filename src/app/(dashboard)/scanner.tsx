@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, {
   FadeIn,
   SlideInDown,
@@ -70,6 +70,7 @@ export default function ScannerScreen() {
   const [mode, setMode] = useState<ScanMode>('qr');
   const [hasScanned, setHasScanned] = useState(false);
   const permissionRequested = useRef(false);
+  const scannerFocused = useRef(false);
   const scanLock = useRef(false),
     issueLock = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,6 +83,18 @@ export default function ScannerScreen() {
   const [issueNote, setIssueNote] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      scannerFocused.current = true;
+      scanLock.current = false;
+      setHasScanned(false);
+      return () => {
+        scannerFocused.current = false;
+        scanLock.current = true;
+      };
+    }, [])
+  );
 
   const resumeScanning = () => {
     scanLock.current = false;
@@ -116,7 +129,13 @@ export default function ScannerScreen() {
   } | null>(null);
 
   const handleBarCodeScanned = async (scanResult: ScanGeometry) => {
-    if (hasScanned || scanLock.current || cooldownSeconds > 0 || !layout)
+    if (
+      !scannerFocused.current ||
+      hasScanned ||
+      scanLock.current ||
+      cooldownSeconds > 0 ||
+      !layout
+    )
       return;
 
     const { data, type, bounds, cornerPoints, boundingBox } = scanResult;
@@ -554,6 +573,25 @@ export default function ScannerScreen() {
                           </View>
                         </View>
                       </View>
+
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="View full asset profile"
+                        className="bg-primary rounded-xl py-4 items-center justify-center mt-6"
+                        onPress={() => {
+                          const assetId = scannedAsset.asset.id;
+                          // Keep scanning paused until this screen regains focus.
+                          setScannedAsset(null);
+                          router.push({
+                            pathname: '/asset/[assetId]',
+                            params: { assetId },
+                          });
+                        }}
+                      >
+                        <Text className="text-white font-sansBold text-base">
+                          View full asset profile
+                        </Text>
+                      </Pressable>
 
                       <Pressable
                         className="bg-[#ef4444] rounded-xl py-4 items-center justify-center mt-8 active:opacity-90"

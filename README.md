@@ -8,25 +8,24 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 
 ## Key Capabilities
 
-* **Tethered Data Entry (Barcode Injection)**: Scan manufacturer 1D barcodes (Code 128, Code 39, UPC, EAN) using the camera to instantly inject values into the active input field on your EITAMS desktop screen via Pusher WebSockets.
-* **Standalone Lookup**: Scan QR codes on-the-go to load live asset metadata (Asset Tag, Status, Model, Location, and current Custodian) in a native bottom-sheet overlay.
-* **Identity Handshake**: Link the mobile client securely to EITAMS desktop sessions using encrypted JWT keys with `expo-secure-store` and `expo-camera` for scan handshake.
-* **My Assets**: Review assigned equipment, accept pending handovers, and report a fault from the asset sheet. Reporting starts the existing repair workflow and closes custody; it is restricted to asset-management roles.
-* **Actionable Alerts**: Load older alerts, mark them read, and open My Assets natively. Other supported alert links open the trusted web deployment using its normal browser sign-in.
-* **Honest Dashboard States**: Metrics show loading and retry states when the API is unavailable. Unknown asset statuses keep their actual labels.
-
+- **Tethered Data Entry (Barcode Injection)**: Scan manufacturer 1D barcodes (Code 128, Code 39, UPC, EAN) using the camera to instantly inject values into the active input field on your EITAMS desktop screen via Pusher WebSockets.
+- **Standalone Lookup**: Scan QR codes on-the-go to load live asset metadata (Asset Tag, Status, Model, Location, and current Custodian) in a native bottom-sheet overlay.
+- **Identity Handshake**: Link the mobile client securely to EITAMS desktop sessions using encrypted JWT keys with `expo-secure-store` and `expo-camera` for scan handshake.
+- **My Assets**: Review assigned equipment, accept pending handovers, and report a fault from the asset sheet. Reporting starts the existing repair workflow and closes custody; it is restricted to asset-management roles.
+- **Actionable Alerts**: Load older alerts, mark them read, and open My Assets natively. Other supported alert links open the trusted web deployment using its normal browser sign-in.
+- **Honest Dashboard States**: Metrics show loading and retry states when the API is unavailable. Unknown asset statuses keep their actual labels.
 
 ---
 
 ## Tech Stack
 
-* **Framework**: [React Native](https://reactnative.dev/) / [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)
-* **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based native routing)
-* **Styling**: [NativeWind v4](https://www.nativewind.dev/) (Tailwind CSS engine for React Native)
-* **Language**: TypeScript
-* **Real-time & Sync**: Pusher WebSockets
-* **Hardware Integration**: `expo-camera` (viewfinder scanning) and `expo-haptics` (vibration feedback)
-* **Secure Storage**: `expo-secure-store` for native keychain token encryption
+- **Framework**: [React Native](https://reactnative.dev/) / [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)
+- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based native routing)
+- **Styling**: [NativeWind v4](https://www.nativewind.dev/) (Tailwind CSS engine for React Native)
+- **Language**: TypeScript
+- **Real-time & Sync**: Pusher WebSockets
+- **Hardware Integration**: `expo-camera` (viewfinder scanning) and `expo-haptics` (vibration feedback)
+- **Secure Storage**: `expo-secure-store` for native keychain token encryption
 
 ---
 
@@ -64,21 +63,25 @@ The official React Native mobile companion for the EITAMS (Enterprise IT Asset M
 ### 2. Installation & Setup
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/adithyadilum/it-asset-management-system-mobile.git
    cd it-asset-management-system-mobile
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Configure Environment Variables**:
    Copy `.env.example` to create your local `.env` file (do not use `localhost` when testing on physical mobile devices; use your local IPv4 machine address or Ngrok tunnel URL):
+
    ```bash
    cp .env.example .env
    ```
+
    Open `.env` and configure your API endpoint and Pusher keys.
 
 4. **Start the Metro Bundler**:
@@ -114,3 +117,13 @@ npx expo export --platform android --output-dir dist
 ---
 
 Developed for **TIQRI Corporation**. All rights reserved.
+
+## Inventory and asset profiles
+
+The Inventory tab browses the shared registry for paired IT operators and administrators. Search by asset tag, serial number, name, brand, model, category or location; combine asset type, category, status and location filters. Results load in pages of 20 with pull-to-refresh and retry controls.
+
+Tap an asset or choose **View full asset profile** after a QR scan to view its image, specifications, current custody, warranty, software seat usage, recent maintenance and activity. Profiles use an operational API payload without purchase prices, invoices, licence keys or internal assignment notes. Missing information is shown as unrecorded. Repair reporting uses the existing maintenance workflow.
+
+Backend routes required: `GET /api/v1/inventory` and `GET /api/v1/inventory/:assetId`. Both require registry access and accept the existing mobile bearer token. The backend API documentation describes query limits and response fields.
+
+Validation: `npm run check`, `node scripts/check-audit-baseline.mjs`, `npx expo-doctor`, and `npx expo export --platform android --platform ios`. The CI workflow also exports both native bundles.
